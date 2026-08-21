@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fantasy-gm"
+version = "0.1.0"
+description = "AI-assisted ESPN fantasy football manager"
+requires-python = ">=3.11"
+dependencies = [
+  "requests>=2.32",
+  "python-dotenv>=1.0",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "typer>=0.12",
+  "rich>=13.7",
+  "nflreadpy>=0.1",
+  "polars>=1.0",
+  "openai>=1.0",
+]
+
+[project.scripts]
+fantasy-gm = "fantasy_gm.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["fantasy_gm*"]
