@@ -48,6 +48,27 @@ class ESPNClient:
         )
 
     def _get(self, url: str, *, params=None, headers=None) -> Any:
+        response = self._request(
+            url,
+            params=params,
+            headers=headers,
+        )
+
+        try:
+            return response.json()
+        except requests.JSONDecodeError as exc:
+            raise ESPNError(
+                "ESPN returned a non-JSON response; "
+                "session may be expired"
+            ) from exc
+
+    def _request(
+        self,
+        url: str,
+        *,
+        params=None,
+        headers=None,
+    ) -> requests.Response:
         attempts = 3
 
         for attempt in range(1, attempts + 1):
@@ -66,14 +87,7 @@ class ESPNClient:
                     )
 
                 response.raise_for_status()
-
-                try:
-                    return response.json()
-                except requests.JSONDecodeError as exc:
-                    raise ESPNError(
-                        "ESPN returned a non-JSON response; "
-                        "session may be expired"
-                    ) from exc
+                return response
 
             except (
                 requests.exceptions.ConnectionError,
@@ -128,7 +142,6 @@ class ESPNClient:
             headers=headers,
         )
 
-
     def get_draft_security(
         self,
         *,
@@ -144,16 +157,7 @@ class ESPNClient:
             f"leagues/{target_league}/teams/{target_team}/draftSecurity"
         )
 
-        response = self.session.get(url, timeout=20)
+        response = self._request(url)
 
-        if response.status_code in (401, 403):
-            raise ESPNAuthError(
-                f"ESPN draftSecurity authentication failed "
-                f"({response.status_code})"
-            )
-
-        response.raise_for_status()
-
-        # In the captured ESPN browser flow this endpoint returns a plain numeric
-        # token, not a JSON object.
+        # ESPN returns a plain numeric token here, not JSON.
         return response.text.strip()
