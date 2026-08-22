@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 from typing import Any, Iterable
-
-import requests
-
 from fantasy_gm.config import Settings
+
+import json
+import time
+import requests
 
 
 class ESPNError(RuntimeError):
@@ -48,14 +48,46 @@ class ESPNClient:
         )
 
     def _get(self, url: str, *, params=None, headers=None) -> Any:
-        response = self.session.get(url, params=params, headers=headers, timeout=20)
-        if response.status_code in (401, 403):
-            raise ESPNAuthError(f"ESPN authentication failed ({response.status_code})")
-        response.raise_for_status()
-        try:
-            return response.json()
-        except requests.JSONDecodeError as exc:
-            raise ESPNError("ESPN returned a non-JSON response; session may be expired") from exc
+        attempts = 3
+
+        for attempt in range(1, attempts + 1):
+            try:
+                response = self.session.get(
+                    url,
+                    params=params,
+                    headers=headers,
+                    timeout=20,
+                )
+
+                if response.status_code in (401, 403):
+                    raise ESPNAuthError(
+                        f"ESPN authentication failed "
+                        f"({response.status_code})"
+                    )
+
+                response.raise_for_status()
+
+                try:
+                    return response.json()
+                except requests.JSONDecodeError as exc:
+                    raise ESPNError(
+                        "ESPN returned a non-JSON response; "
+                        "session may be expired"
+                    ) from exc
+
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            ) as exc:
+                print(
+                    f"ESPN request failed "
+                    f"(attempt {attempt}/{attempts}): {exc!r}"
+                )
+
+                if attempt == attempts:
+                    raise
+
+                time.sleep(2 ** (attempt - 1))
 
     def get_league(self, views: Iterable[str]) -> dict[str, Any]:
         params = [("view", view) for view in views]
