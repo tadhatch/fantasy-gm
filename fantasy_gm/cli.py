@@ -1,12 +1,17 @@
 from __future__ import annotations
+import time
+
+from fantasy_gm.espn.draft import load_draft_picks
+
 
 import typer
-import os
 from rich.console import Console
 from rich.table import Table
 
 from fantasy_gm.config import get_settings
 from fantasy_gm.draft.watcher import watch_draft
+from fantasy_gm.draft.watcher_live import watch_live_draft
+from fantasy_gm.draft.runner import DraftRunner, DraftRunnerConfig
 from fantasy_gm.espn.client import ESPNClient
 from fantasy_gm.espn.constants import POSITION_IDS
 from fantasy_gm.espn.draft import load_draft_picks
@@ -69,8 +74,6 @@ def board(top: int = typer.Option(50, min=1, max=300)) -> None:
     settings = get_settings()
     client = ESPNClient(settings)
 
-    favorite_team=os.getenv("FANTASY_GM_FAVORITE_TEAM"),
-    fandom_weight=float(os.getenv("FANTASY_GM_FANDOM_WEIGHT", "1.5")),
 
     _, draft_picks = load_draft_picks(client)
     selected = [p for p in draft_picks if p.player_id > 0]
@@ -95,6 +98,8 @@ def board(top: int = typer.Option(50, min=1, max=300)) -> None:
         season=settings.espn_season,
         next_pick=next_pick,
         history_season=settings.espn_season - 1,
+        favorite_team=settings.favorite_team,
+        fandom_weight=settings.fandom_weight,
     )
     render_board(rows, limit=top)
 
@@ -104,6 +109,12 @@ def context_refresh(
     top: int = typer.Option(30, min=1, max=200),
     force: bool = typer.Option(False, "--force"),
     freshness_hours: int = typer.Option(12, min=1, max=168),
+    max_deep_dives: int = typer.Option(
+        8,
+        "--max-deep-dives",
+        min=0,
+        max=50,
+    ),
 ) -> None:
     settings = get_settings()
     client = ESPNClient(settings)
@@ -136,8 +147,8 @@ def context_refresh(
 
     console = Console()
 
-    def progress(i, total, player, state):
-        console.print(f"[{i:>3}/{total}] {state:>11}  {player.name}")
+    def progress(i, total, player, state, decision):
+        console.print(f"[{i:>3}/{total}] {state:>20}  {player.name}")
 
     refresh_context(
         board_rows,
@@ -145,6 +156,8 @@ def context_refresh(
         force=force,
         freshness_hours=freshness_hours,
         progress=progress,
+        next_pick=next_pick,
+        max_deep_dives=max_deep_dives,
     )
 
     console.print("\n[green]Context refresh complete.[/green]")
@@ -175,5 +188,163 @@ def draft_status() -> None:
 
 
 @draft_app.command("watch")
-def draft_watch() -> None:
-    watch_draft(get_settings())
+def draft_watch(
+    league_id: int | None = typer.Option(
+        None,
+        "--league-id",
+        help="Override configured ESPN league ID (useful for mock drafts)",
+    ),
+    show_clock: bool = typer.Option(
+        False,
+        "--show-clock",
+    ),
+    show_unknown: bool = typer.Option(
+        False,
+        "--show-unknown",
+    ),
+) -> None:
+    settings = get_settings()
+
+    client = ESPNClient(
+        settings,
+        league_id=league_id,
+    )
+
+    watch_live_draft(
+        client,
+        team_id=settings.espn_team_id,
+        show_clock=show_clock,
+        show_unknown=show_unknown,
+    )
+
+    console = Console()
+
+    effective_league_id = (
+        league_id
+        if league_id is not None
+        else settings.espn_league_id
+    )
+
+    console.print(
+        f"[bold]Watching ESPN draft[/bold] "
+        f"league={effective_league_id} "
+        f"team={settings.espn_team_id}"
+    )
+
+    seen: dict[int, int] = {}
+
+    try:
+        while True:
+            draft_data, picks = load_draft_picks(client)
+
+            drafted = bool(draft_data.get("drafted"))
+            in_progress = bool(draft_data.get("inProgress"))
+
+            for pick in picks:
+                # ESPN uses -1 for an unfilled draft slot.
+                if pick.player_id <= 0:
+                    continue
+
+                previous = seen.get(pick.overall_pick)
+
+                if previous == pick.player_id:
+                    continue
+
+                seen[pick.overall_pick] = pick.player_id
+
+                ours = (
+                    " [bold green]THE RESERVISTS[/bold green]"
+                    if pick.team_id == settings.espn_team_id
+                    else ""
+                )
+
+                console.print(
+                    f"Pick {pick.overall_pick:>3} "
+                    f"(R{pick.round_id}.{pick.round_pick}) "
+                    f"Team {pick.team_id:>2} "
+                    f"→ ESPN player {pick.player_id}"
+                    f"{ours}"
+                )
+
+            filled = sum(
+                1
+                for pick in picks
+                if pick.player_id > 0
+            )
+
+            if drafted:
+                console.print(
+                    f"\n[green]Draft complete. "
+                    f"{filled}/{len(picks)} picks filled.[/green]"
+                )
+                break
+
+            time.sleep(poll_seconds)
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Draft watcher stopped.[/yellow]")
+
+
+from fantasy_gm.draft.session import DraftSession
+
+@draft_app.command("select")
+def draft_select(
+    player_id: int = typer.Argument(...),
+    league_id: int | None = typer.Option(None, "--league-id"),
+) -> None:
+    settings = get_settings()
+    client = ESPNClient(settings, league_id=league_id)
+
+    with DraftSession(
+        client,
+        team_id=settings.espn_team_id,
+    ) as session:
+        console = Console()
+        console.print(
+            f"Connected. Submitting ESPN player {player_id} "
+            "when explicitly requested..."
+        )
+        selected = session.select_and_wait(player_id)
+        console.print(
+            f"[green]ESPN acknowledged player {selected.player_id} "
+            f"for team {selected.team_id}.[/green]"
+        )
+
+@draft_app.command("run")
+def draft_run(
+    league_id: int | None = typer.Option(
+        None,
+        "--league-id",
+        help="Override league ID for ESPN mock drafts",
+    ),
+    auto_select: bool | None = typer.Option(
+        None,
+        "--auto-select/--no-auto-select",
+        help="Allow Fantasy GM to submit its recommendation through ESPN",
+    ),
+) -> None:
+    settings = get_settings()
+    client = ESPNClient(settings, league_id=league_id)
+
+    if auto_select is None:
+        # Keep compatibility with the existing environment flag.
+        import os
+        auto_select = (
+            os.getenv("FANTASY_GM_AUTO_SELECT", "false")
+            .strip()
+            .lower()
+            in {"1", "true", "yes", "on"}
+        )
+
+    runner = DraftRunner(
+        client,
+        team_id=settings.espn_team_id,
+        favorite_team=settings.favorite_team,
+        fandom_weight=settings.fandom_weight,
+        config=DraftRunnerConfig(
+            auto_select=auto_select,
+            ack_timeout=3.0,
+        ),
+    )
+
+    runner.run()

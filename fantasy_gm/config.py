@@ -17,6 +17,15 @@ class Settings(BaseSettings):
     espn_s2: str = Field(alias="ESPN_S2")
     espn_poll_seconds: float = Field(default=2.0, alias="ESPN_POLL_SECONDS")
 
+    favorite_team: str | None = Field(
+        default=None,
+        alias="FANTASY_GM_FAVORITE_TEAM",
+    )
+
+    fandom_weight: float = Field(
+        default=1.5,
+        alias="FANTASY_GM_FANDOM_WEIGHT",
+    )
 
 @lru_cache
 def get_settings() -> Settings:

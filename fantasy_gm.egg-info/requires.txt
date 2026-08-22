@@ -7,3 +7,4 @@ rich>=13.7
 nflreadpy>=0.1
 polars>=1.0
 openai>=1.0
+websocket-client>=1.8

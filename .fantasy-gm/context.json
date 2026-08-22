@@ -1,183 +1,207 @@
 {
   "players": {
     "3043078": {
-      "availability_risk": 0.08,
+      "availability_risk": 0.15,
       "category": "role",
       "confidence": 0.88,
-      "direct_delta": 1.0,
+      "direct_delta": 3.0,
       "distraction_risk": 0.01,
       "espn_id": 3043078,
       "evidence": [
         {
-          "claim": "Offensive coordinator Declan Doyle said the vision for Henry is an immense role and that he expects Henry to have a pretty large workload, while declining to set a carry total.",
-          "published_at": "2026-08-12",
-          "reliability": 0.95,
-          "source": "Baltimore Ravens",
-          "title": "Transcript: Press Conferences (8/12/26)",
-          "url": "https://www.baltimoreravens.com/news/transcript-press-conferences-8-12-26"
-        },
-        {
-          "claim": "Reporting from training camp indicated Henry is expected to retain his normal heavy workload, has been used on more designed perimeter runs, and may receive somewhat more passing-game work.",
+          "claim": "Jeremy Fowler reports Henry is expected to receive his normal workload, with more designed perimeter runs and increased involvement in the passing game under Declan Doyle.",
           "published_at": "2026-08-11",
-          "reliability": 0.8,
-          "source": "CBS Sports / RotoWire, citing ESPN's Jeremy Fowler",
+          "reliability": 0.84,
+          "source": "CBS Sports/RotoWire",
           "title": "Ravens' Derrick Henry: Expected to maintain workload",
           "url": "https://www.cbssports.com/fantasy/football/news/ravens-derrick-henry-expected-to-maintain-workload/"
         },
         {
-          "claim": "Danny Pinter, who had impressed while taking first-team center reps, suffered a torn patella tendon and is expected to miss extended time; Ethan Pocic and Jovaughn Gwyn now compete to replace departed Pro Bowl center Tyler Linderbaum.",
-          "published_at": "2026-08-20",
-          "reliability": 0.95,
+          "claim": "The Ravens expect to remain run-heavy under Doyle, who previously coordinated Chicago's third-ranked rushing attack, and the team specifically intends to create chunk plays for Henry and other backs.",
+          "published_at": "2026-07-29",
+          "reliability": 0.93,
           "source": "Baltimore Ravens",
-          "title": "News & Notes: Danny Pinter to Miss Extended Time With Injury",
-          "url": "https://www.baltimoreravens.com/news/danny-pinter-miss-extended-time-ravens-center-injury-vikings-joint-practice"
+          "title": "Mailbag: Will the Ravens Still Be a Heavy Run Team?",
+          "url": "https://www.baltimoreravens.com/news/ravens-mailbag-declan-doyle-heavy-run-team-jakobi-lane-elijah-sarratt"
         },
         {
-          "claim": "The Ravens listed Henry as the projected starter, with Justice Hill as the established versatile backup and Rasheen Ali and rookie Adam Randall competing for the No. 3 role.",
-          "published_at": "2026-07-15",
+          "claim": "Head coach Jesse Minter indicated Baltimore will be smart about getting Henry through the long season, framing reduced camp exposure as preservation rather than concern about declining ability.",
+          "published_at": "2026-08-01",
+          "reliability": 0.76,
+          "source": "Yahoo Sports/Ravens Wire",
+          "title": "Jesse Minter hints at possible workload management for Derrick Henry",
+          "url": "https://sports.yahoo.com/articles/jesse-minter-hints-possible-workload-010924498.html"
+        },
+        {
+          "claim": "Henry remains Baltimore's entrenched lead back, with Justice Hill and Rasheen Ali described as rotational or situational backups; Minter said the team is handing the ball to Henry.",
+          "published_at": "2026-05-22",
+          "reliability": 0.91,
+          "source": "NFL.com",
+          "title": "Derrick Henry embracing Ravens' new era under Jesse Minter: 'Change can be good'",
+          "url": "https://www.nfl.com/news/derrick-henry-embracing-ravens-new-era-under-jesse-minter-change-can-be-good"
+        },
+        {
+          "claim": "The official team page features Henry participating in the Ravens' August 19 joint practice with Minnesota, including a highlight of him running effectively against the Vikings front, with no current injury designation reported.",
+          "published_at": "2026-08-19",
           "reliability": 0.9,
           "source": "Baltimore Ravens",
-          "title": "Training Camp Competition Preview: Running Back",
-          "url": "https://www.baltimoreravens.com/news/derrick-henry-justice-hill-adam-randall-rasheen-ali-training-camp-competion-preview-ravens-2026"
+          "title": "Derrick Henry",
+          "url": "https://www.baltimoreravens.com/team/players-roster/derrick-henry-x7588/"
         },
         {
-          "claim": "Henry briefly went down after banging knees with a teammate but promptly returned to 11-on-11 drills; this was not an ongoing knee injury.",
-          "published_at": "2026-05-19",
-          "reliability": 0.95,
+          "claim": "The Ravens reported Henry is not considering retirement, reducing concern that age-related speculation could affect his 2026 availability or role.",
+          "published_at": "2026-07-30",
+          "reliability": 0.87,
           "source": "Baltimore Ravens",
-          "title": "Practice Report: Derrick Henry Gives Everyone a Scare at OTAs",
-          "url": "https://www.baltimoreravens.com/news/derrick-henry-scare-ravens-otas-practice-report-tyler-loop-robert-longerbeam"
+          "title": "Derrick Henry Isn't Thinking About Retirement",
+          "url": "https://www.baltimoreravens.com/news/news-and-notes"
         }
       ],
       "injury_change": 0.0,
-      "model": "gpt-5.6-terra",
+      "model": "gpt-5.6-luna",
       "player_name": "Derrick Henry",
-      "raw_response_id": "resp_035abb9a67eab257006a88740d7c2487d2b169dc0bc64fe480",
+      "raw_response_id": "resp_07e6605dffe8110b006a889f45be1487d28d99f567270b6abb",
       "related_players": [
+        {
+          "confidence": 0.82,
+          "delta": -1.5,
+          "player_name": "Justice Hill",
+          "reason": "Henry remains the unquestioned lead back and is expected to retain a heavy workload, limiting Hill's carry and touchdown opportunities despite his rotational role.",
+          "relationship": "direct_backup"
+        },
         {
           "confidence": 0.77,
           "delta": -1.0,
-          "player_name": "Justice Hill",
-          "reason": "Doyle's stated intention to give Henry a large workload and reports of normal heavy usage slightly reduce the probability of a meaningful standalone rushing expansion for Hill, though Hill remains the primary passing-down option and leading handcuff.",
+          "player_name": "Rasheen Ali",
+          "reason": "Continued bell-cow usage for Henry keeps Ali in a depth and situational role unless Henry misses time.",
           "relationship": "direct_backup"
         },
         {
-          "confidence": 0.71,
-          "delta": -1.0,
-          "player_name": "Lamar Jackson",
-          "reason": "The sudden loss of Pinter intensifies an already unsettled center transition after Linderbaum's departure, creating modest protection and interior-line risk for the offense.",
-          "relationship": "quarterback"
-        },
-        {
-          "confidence": 0.69,
-          "delta": -1.0,
-          "player_name": "Rasheen Ali",
-          "reason": "Ali remains behind both Henry and Hill while competing with Adam Randall for the No. 3 job; current evidence does not indicate an expanded offensive role.",
-          "relationship": "same_backfield"
-        },
-        {
-          "confidence": 0.65,
-          "delta": -1.0,
+          "confidence": 0.68,
+          "delta": -0.5,
           "player_name": "Adam Randall",
-          "reason": "The rookie is competing for the No. 3 back role rather than threatening Henry's lead role, and the staff's heavy-workload messaging for Henry limits near-term standalone opportunity.",
-          "relationship": "same_backfield"
+          "reason": "The rookie is part of the backfield depth behind Henry, Hill, and Ali, so reports of Henry maintaining his workload further reduce his near-term offensive opportunity.",
+          "relationship": "direct_backup"
         }
       ],
-      "researched_at": "2026-08-21T15:52:21.118643+00:00",
-      "role_change": 0.18,
-      "summary": "Henry is healthy, practicing, and remains Baltimore's clear RB1. New OC Declan Doyle has explicitly projected an immense/large role, while camp reporting indicates continued heavy volume plus more perimeter concepts and some added receiving usage. The main current offset is offensive-line uncertainty: Baltimore lost Tyler Linderbaum, and leading center candidate Danny Pinter suffered a torn patella tendon on August 20, leaving an unsettled replacement at center."
+      "researched_at": "2026-08-21T18:56:32.222808+00:00",
+      "role_change": 0.22,
+      "summary": "Henry is healthy and active entering the 2026 season, remains Baltimore's clear lead back, and recent reports indicate a normal heavy workload with more perimeter runs and passing-game involvement under new OC Declan Doyle. Baltimore intends to remain run-heavy, though the new staff may manage Henry's practice workload because he is 32 and entering Year 11. [route: luna (deep=0.34); top-10 current board candidate; ADP near upcoming selection]"
     },
     "3117251": {
-      "availability_risk": 0.3,
+      "availability_risk": 0.28,
       "category": "injury",
-      "confidence": 0.84,
-      "direct_delta": -5.0,
-      "distraction_risk": 0.07,
+      "confidence": 0.86,
+      "direct_delta": -3.0,
+      "distraction_risk": 0.03,
       "espn_id": 3117251,
       "evidence": [
         {
-          "claim": "McCaffrey did not play against the Chargers on August 20 while still being managed for tightness, but participated in pregame warmups and appeared to move normally; the report said there was no indication he was at risk for Week 1.",
-          "published_at": "2026-08-20",
-          "reliability": 0.78,
-          "source": "CBS Sports / RotoWire",
-          "title": "49ers' Christian McCaffrey: Not suited up for Thursday's game",
-          "url": "https://www.cbssports.com/nfl/players/2136743/christian-mccaffrey/fantasy/"
-        },
-        {
-          "claim": "Shanahan said McCaffrey would have practiced if the club were not in a joint practice setting and rejected the idea that the absence was contract-related.",
-          "published_at": "2026-08-18",
-          "reliability": 0.9,
+          "claim": "McCaffrey did not practice because of soreness; the team gave extended opportunities to Patrick Taylor Jr., Sincere McCormick and Khalil Herbert while he was sidelined.",
+          "published_at": "2026-08-10",
+          "reliability": 0.98,
           "source": "San Francisco 49ers",
-          "title": "Kyle Shanahan and 49ers Players Address the Media",
-          "url": "https://www.49ers.com/video/49ers-players-address-the-media-following-practice-x3776"
+          "title": "Day 10 of 2026 Training Camp: Offense Makes Plays Ahead of Titans Joint Practice",
+          "url": "https://www.49ers.com/news/day-10-of-2026-training-camp-offense-makes-plays-ahead-of-titans-joint-practice"
         },
         {
-          "claim": "The team listed McCaffrey as sidelined with soreness at the Chargers joint practice, extending an absence that began August 10.",
-          "published_at": "2026-08-18",
-          "reliability": 0.93,
+          "claim": "Kubiak said McCaffrey's rep count was on schedule, described the issue as being managed soreness, and said the veteran was doing fine.",
+          "published_at": "2026-08-10",
+          "reliability": 0.97,
+          "source": "San Francisco 49ers official transcript",
+          "title": "Offensive Coordinator Klay Kubiak Press Conference",
+          "url": "https://49ers.1rmg.com/transcripts/offensive-coordinator-klay-kubiak-press-conference_8-10-26/"
+        },
+        {
+          "claim": "McCaffrey remained sidelined with soreness during the final open practice of training camp, indicating the issue persisted for roughly a week.",
+          "published_at": "2026-08-16",
+          "reliability": 0.98,
           "source": "San Francisco 49ers",
-          "title": "Day 14 of 2026 Training Camp: Kaelon Black Returns for Joint Practice with Chargers",
-          "url": "https://www.49ers.com/news/day-14-of-2026-training-camp-kaelon-black-returns-for-joint-practice-with-chargers"
+          "title": "Day 13 of 2026 Training Camp: Cowing Shines, Defense Delivers in Red Zone",
+          "url": "https://www.49ers.com/news/day-13-of-2026-training-camp-cowing-shines-defense-delivers-in-red-zone"
         },
         {
-          "claim": "Shanahan and the coaching staff stated they intended to reduce McCaffrey's usage after 450 combined regular-season and playoff touches in 2025; RB coach Bobby Turner and OC Klay Kubiak specifically discussed using a better rotation to keep him fresh.",
-          "published_at": "2026-06-09",
-          "reliability": 0.95,
-          "source": "Associated Press via CBS News Bay Area",
-          "title": "49ers vow to reduce workload for Christian McCaffrey even if he doesn't want it",
-          "url": "https://www.cbsnews.com/sanfrancisco/news/49ers-2026-christian-mccaffrey-load-management/"
+          "claim": "Shanahan said McCaffrey would have practiced if the session had not been a joint practice against the Chargers and said the missed time was not believed to be contract-related.",
+          "published_at": "2026-08-18",
+          "reliability": 0.87,
+          "source": "FantasyPros, citing Adam Schefter and Kyle Shanahan",
+          "title": "Christian McCaffrey would have practiced Tuesday if it wasn't joint practice",
+          "url": "https://www.fantasypros.com/nfl/news/603053/christian-mccaffrey-would-have-practiced-tuesday-if-it-wasnt-joint.php"
         },
         {
-          "claim": "The article reported outside speculation that the tightness could mask a contract hold-in, but also quoted Shanahan saying the club's concern was preventing tightness from becoming a more serious muscle injury.",
+          "claim": "The unofficial depth chart still lists McCaffrey as the first-team running back, with Jordan James and Kaelon Black listed behind him.",
           "published_at": "2026-08-17",
-          "reliability": 0.58,
-          "source": "SFGATE",
-          "title": "NFL insiders suggest Christian McCaffrey is in contract dispute with 49ers",
-          "url": "https://www.sfgate.com/49ers/article/christian-mccaffrey-49ers-injury-22391735.php"
+          "reliability": 0.99,
+          "source": "San Francisco 49ers",
+          "title": "49ers Depth Chart",
+          "url": "https://www.49ers.com/team/depth-chart"
+        },
+        {
+          "claim": "McCaffrey is entering his age-30 season after a league-leading 413-touch 2025 regular season; the 49ers also added Mike Evans and Christian Kirk, potentially reducing defensive concentration on McCaffrey without changing his central offensive role.",
+          "published_at": "2026-08-20",
+          "reliability": 0.94,
+          "source": "NFL.com",
+          "title": "Niners RB Christian McCaffrey shrugs off workload concerns entering age-30 season",
+          "url": "https://www.nfl.com/news/niners-rb-christian-mccaffrey-shrugs-off-workload-concerns-entering-age-30-season"
         }
       ],
-      "injury_change": -0.28,
-      "model": "gpt-5.6-terra",
+      "injury_change": 0.22,
+      "model": "gpt-5.6-luna",
       "player_name": "Christian McCaffrey",
-      "raw_response_id": "resp_068804f2b0490ce6006a887332831887d2977824334f5f5eea",
+      "raw_response_id": "resp_04c9728083d73b0f006a889ea868c887d28a87226ca40c1c3f",
       "related_players": [
         {
-          "confidence": 0.72,
-          "delta": 3.0,
-          "player_name": "Kaelon Black",
-          "reason": "The rookie received first-team preseason-game touches while McCaffrey was inactive and is competing for the No. 2 role; the club's declared desire for a deeper backfield rotation raises his contingent workload upside.",
+          "confidence": 0.82,
+          "delta": 2.5,
+          "player_name": "Jordan James",
+          "reason": "The 49ers' August 17 unofficial depth chart lists James as the first backup behind McCaffrey, so any missed time or workload limitation would likely increase his early-season touches.",
           "relationship": "direct_backup"
         },
         {
-          "confidence": 0.48,
-          "delta": 1.0,
-          "player_name": "Jordan James",
-          "reason": "A reduced McCaffrey workload would theoretically create reserve snaps, but James is currently managing a rib injury and has not established a clear edge in the backup competition.",
+          "confidence": 0.68,
+          "delta": 1.5,
+          "player_name": "Patrick Taylor Jr.",
+          "reason": "Taylor received extended practice opportunities when McCaffrey and other backs were sidelined and could retain a complementary role if San Francisco manages McCaffrey's workload.",
           "relationship": "same_backfield"
+        },
+        {
+          "confidence": 0.57,
+          "delta": 0.8,
+          "player_name": "Deebo Samuel Sr.",
+          "reason": "The offensive staff indicated that absences in the running-back room create opportunities to use Samuel in the backfield and give him additional touches.",
+          "relationship": "same_offense"
         }
       ],
-      "researched_at": "2026-08-21T15:48:40.260747+00:00",
-      "role_change": -0.24,
-      "summary": "McCaffrey has missed practice time since August 10 with unspecified soreness/tightness and did not play in the August 20 preseason game, although he warmed up normally and Kyle Shanahan has repeatedly indicated the issue is precautionary rather than a Week 1 concern. The more durable fantasy-relevant adjustment is San Francisco's stated plan to reduce his game workload after 450 2025 regular-season/playoff touches and an 83% snap rate, creating a modest downside to a baseline built on last year's extreme volume. Contract-hold-in speculation is unconfirmed and has been denied by Shanahan."
+      "researched_at": "2026-08-21T18:53:57.493276+00:00",
+      "role_change": -0.08,
+      "summary": "As of August 21, 2026, McCaffrey remains San Francisco's clear RB1, but he has missed multiple recent practices with muscle tightness/soreness. Kyle Shanahan and the team have characterized it as minor and not contract-related, while indicating he likely would have practiced outside a joint-practice setting. The repeated absences create a modest availability and workload-management concern entering the season, especially after his 413-touch 2025 workload, but there is no confirmed major injury or depth-chart change. [route: luna (deep=0.31); availability risk (28%); top-10 current board candidate]"
     },
     "3918298": {
-      "availability_risk": 0.1,
-      "category": "injury",
+      "availability_risk": 0.03,
+      "category": "coaching",
       "confidence": 0.87,
-      "direct_delta": 1.0,
+      "direct_delta": 3.0,
       "distraction_risk": 0.01,
       "espn_id": 3918298,
       "evidence": [
         {
-          "claim": "Allen confirmed he broke his right fifth metatarsal during the 2025 season and underwent surgery on January 26; GM Brandon Beane said the expected recovery would not interfere with spring workouts barring setbacks.",
-          "published_at": "2026-02-12",
+          "claim": "Allen participated in the opening practice and began building chemistry with offseason addition D.J. Moore, including a 20-yard completion during team drills.",
+          "published_at": "2026-07-29T16:21:00-04:00",
           "reliability": 0.95,
           "source": "Buffalo Bills",
-          "title": "Five things to know about the 2026 Buffalo Bills roster going into the offseason",
-          "url": "https://www.buffalobills.com/news/five-things-to-know-about-the-2026-buffalo-bills-roster-going-into-the-offseason"
+          "title": "What we learned about the Bills on Day 1 of Training Camp 2026",
+          "url": "https://www.buffalobills.com/news/what-we-learned-about-the-bills-on-day-1-of-training-camp-2026"
         },
         {
-          "claim": "Allen started Buffalo's preseason opener and directed the first-team offense; official NFL statistics list him at 6-of-8 for 111 yards, one touchdown, no interceptions and one sack.",
+          "claim": "Allen and Moore connected on a 50-yard touchdown during padded team practice, providing evidence of a potentially improved downfield dimension.",
+          "published_at": "2026-08-04T16:26:00-04:00",
+          "reliability": 0.95,
+          "source": "Buffalo Bills",
+          "title": "What we learned about the Bills on Day 5 of Training Camp 2026",
+          "url": "https://www.buffalobills.com/news/what-we-learned-about-the-bills-on-day-5-of-training-camp-2026"
+        },
+        {
+          "claim": "Allen took the opening snap of Buffalo's preseason game and completed a 21-yard opening-play pass to Khalil Shakir, confirming active game participation without a reported limitation.",
           "published_at": "2026-08-15",
           "reliability": 0.95,
           "source": "Buffalo Bills",
@@ -185,443 +209,696 @@
           "url": "https://www.buffalobills.com/news/bills-29-panthers-14-final-score-game-highlights-key-stats-preseason-week-1"
         },
         {
-          "claim": "NFL preseason logs confirm Allen's August 15 line versus Carolina: 6 completions on 8 attempts, 111 yards and one touchdown.",
+          "claim": "The report identified Moore as adding a new dimension to Buffalo's offense while Joe Brady retained continuity with the system he previously coordinated.",
+          "published_at": "2026-08-14T12:16:00-04:00",
+          "reliability": 0.9,
+          "source": "The Washington Post",
+          "title": "Josh Allen and DJ Moore show signs of bringing back big-play dimension to Bills offense",
+          "url": "https://www.washingtonpost.com/sports/nfl/2026/08/14/buffalo-bills-josh-allen-dj-moore/79404c00-97fb-11f1-9ef9-1be722184483_story.html"
+        },
+        {
+          "claim": "Allen indicated he is content with his current contract, reducing concern about a holdout or contract-related distraction.",
           "published_at": "2026-08-19",
-          "reliability": 0.98,
-          "source": "NFL",
-          "title": "Josh Allen 2026 Logs Stats",
-          "url": "https://www.nfl.com/players/josh-allen/stats/logs/2026/"
+          "reliability": 0.9,
+          "source": "NFL.com",
+          "title": "Bills QB Josh Allen content with current contract despite APY ranking",
+          "url": "https://www.nfl.com/news/bills-qb-josh-allen-content-with-current-contract-despite-apy-ranking"
         },
         {
-          "claim": "Allen was an active participant in the August 18 open practice, including full-team deep-ball work with Dante Pettis and Joshua Palmer; no limitation or injury was reported.",
-          "published_at": "2026-08-18",
-          "reliability": 0.92,
+          "claim": "Allen remained active in open practice and delivered a deep touchdown pass to Dante Pettis while also making a downfield connection with Joshua Palmer.",
+          "published_at": "2026-08-18T12:28:00-04:00",
+          "reliability": 0.95,
           "source": "Buffalo Bills",
-          "title": "'What the city of Buffalo is like' | Three things we learned about the Bills during Open Practice at Highmark Stadium",
+          "title": "What the city of Buffalo is like: Three things we learned about the Bills during Open Practice at Highmark Stadium",
           "url": "https://www.buffalobills.com/news/what-the-city-of-buffalo-is-like-what-we-learned-about-the-bills-during-open-practice-at-highmark-stadium"
-        },
-        {
-          "claim": "Head coach Joe Brady said healthy starters, including Allen, would play in the preseason opener; Brady separately identified C Connor McGovern as dealing with a lower-body injury.",
-          "published_at": "2026-08-13",
-          "reliability": 0.93,
-          "source": "Buffalo Bills",
-          "title": "What we learned about the Bills on Day 11 of Training Camp 2026",
-          "url": "https://www.buffalobills.com/news/what-we-learned-about-the-bills-on-day-11-of-training-camp-2026"
         }
       ],
-      "injury_change": 0.3,
-      "model": "gpt-5.6-terra",
+      "injury_change": 0.0,
+      "model": "gpt-5.6-luna",
       "player_name": "Josh Allen",
-      "raw_response_id": "resp_0d6fb4391b197d07006a88737d84cc87d2baa3c6b404f186d7",
+      "raw_response_id": "resp_03c48e2b6082a5dd006a889ec5929087d286933a4a6f494bd1",
       "related_players": [
         {
-          "confidence": 0.9,
-          "delta": -1.0,
-          "player_name": "Kyle Allen",
-          "reason": "Josh Allen's full camp participation and preseason start reduce the likelihood that Buffalo needs meaningful regular-season work from its backup quarterback.",
+          "confidence": 0.82,
+          "delta": 2.0,
+          "player_name": "D.J. Moore",
+          "reason": "Repeated camp connections, including 50-yard and 32-yard completions, support a meaningful vertical role in Allen's offense; the same development that raises Allen's ceiling should improve Moore's target quality and big-play access.",
+          "relationship": "target_competitor"
+        },
+        {
+          "confidence": 0.7,
+          "delta": 1.0,
+          "player_name": "Dalton Kincaid",
+          "reason": "Kincaid reportedly looked healthy and scored two red-zone touchdowns from Allen during camp, suggesting improved availability and continued red-zone involvement in the reworked offense.",
+          "relationship": "target_competitor"
+        },
+        {
+          "confidence": 0.58,
+          "delta": 0.5,
+          "player_name": "James Cook",
+          "reason": "Allen's confirmed first-team usage and continuity in Buffalo's offense preserve the overall touchdown and scoring environment supporting Cook, though Moore's addition creates some target-competition offset.",
+          "relationship": "same_offense"
+        }
+      ],
+      "researched_at": "2026-08-21T18:54:28.421760+00:00",
+      "role_change": 0.15,
+      "summary": "Josh Allen has been a full participant through Buffalo's 2026 training camp, started the August 15 preseason opener, and has shown strong early chemistry with new deep threat D.J. Moore. The Bills' coaching transition from Sean McDermott to Joe Brady introduces some uncertainty, but Brady's continuity as the prior offensive coordinator and reports of a more explosive Allen-centered passing element are modestly positive. No current injury, holdout, suspension, or contract-dispute concern was identified. [route: luna (deep=0.32); top-10 current board candidate; ADP near upcoming selection]"
+    },
+    "3929630": {
+      "availability_risk": 0.08,
+      "category": "coaching",
+      "confidence": 0.8,
+      "direct_delta": 0.0,
+      "distraction_risk": 0.03,
+      "espn_id": 3929630,
+      "evidence": [
+        {
+          "claim": "Barkley is listed first at running back, ahead of Tank Bigsby and Will Shipley, with no injury designation shown.",
+          "published_at": "2026-08-17",
+          "reliability": 0.98,
+          "source": "PhiladelphiaEagles.com",
+          "title": "Philadelphia Eagles Depth Chart",
+          "url": "https://www.philadelphiaeagles.com/team/depth-chart-app"
+        },
+        {
+          "claim": "The Eagles identify Barkley as the primary back entering camp and describe Bigsby and Shipley as the principal backs behind him.",
+          "published_at": "2026-07-07",
+          "reliability": 0.95,
+          "source": "PhiladelphiaEagles.com",
+          "title": "Eagles 2026 Training Camp Position Preview: Running Back",
+          "url": "https://www.philadelphiaeagles.com/news/eagles-2026-training-camp-position-preview-running-back"
+        },
+        {
+          "claim": "Philadelphia's first-year offensive coordinator Sean Mannion is installing an offense with McVay- and Shanahan-like wide-zone concepts, a scheme Barkley has said he admires and believes suits his skill set.",
+          "published_at": "2026-07-30",
+          "reliability": 0.9,
+          "source": "The Philadelphia Inquirer",
+          "title": "Saquon Barkley loves the challenge of 'learning a new language' in Sean Mannion's offense",
+          "url": "https://www.inquirer.com/eagles/2026-training-camp-saquon-barkley-sean-mannion-offense-20260730.html"
+        },
+        {
+          "claim": "Barkley's practice workload was consistent with Philadelphia avoiding unnecessary preseason exposure, rather than evidence of an injury; he continued taking regular first-team work.",
+          "published_at": "2026-08-11",
+          "reliability": 0.9,
+          "source": "The Philadelphia Inquirer",
+          "title": "Eagles practice observations: Saquon Barkley, Elijah Moore stand out",
+          "url": "https://www.inquirer.com/eagles/training-camp-2026-observations-saquon-barkley-elijah-moore-defense-20260811.html"
+        },
+        {
+          "claim": "A report raised the possibility that Philadelphia could reduce Barkley's regular-season workload and use Bigsby more after Barkley's extremely high touch volume over the prior two seasons.",
+          "published_at": "2026-08-01",
+          "reliability": 0.55,
+          "source": "Eliot Shorr-Parks",
+          "title": "Barkley Could Have His Carries Managed This Season",
+          "url": "https://www.reddit.com/r/eagles/comments/1vbqsgu/saquon_barkley-could-have-his-workload-managed/"
+        },
+        {
+          "claim": "During joint practices with New England, Barkley and the Eagles' offensive line showed an inconsistent but potentially productive run game; Lane Johnson has returned to camp, though 2026 may be his final season.",
+          "published_at": "2026-08-20",
+          "reliability": 0.9,
+          "source": "The Philadelphia Inquirer",
+          "title": "Saquon Barkley and Co. think Eagles hot-and-cold run game can be great",
+          "url": "https://www.inquirer.com/eagles/2026-joint-practices-patriots-saquon-barkley-jordan-mailata-20260820.html"
+        },
+        {
+          "claim": "Barkley produced modest gains early in the first joint practice but also had several splash plays as a runner and receiver during camp, supporting continued involvement in multiple phases.",
+          "published_at": "2026-08-19",
+          "reliability": 0.9,
+          "source": "The Philadelphia Inquirer",
+          "title": "Eagles-Patriots joint practice observations",
+          "url": "https://www.inquirer.com/eagles/2026-joint-practices-patriots-aj-brown-saquon-barkley-riq-woolen-jake-elliott-20260819.html"
+        }
+      ],
+      "injury_change": 0.0,
+      "model": "gpt-5.6-luna",
+      "player_name": "Saquon Barkley",
+      "raw_response_id": "resp_0c825d7fe968edfe006a88a067aa6087d28a744cb704cd6599",
+      "related_players": [
+        {
+          "confidence": 0.78,
+          "delta": 2.5,
+          "player_name": "Tank Bigsby",
+          "reason": "Bigsby is the official No. 2 back and could receive additional carries if Philadelphia manages Barkley's workload or if Barkley misses time.",
           "relationship": "direct_backup"
         },
         {
-          "confidence": 0.72,
-          "delta": 1.0,
-          "player_name": "D.J. Moore",
-          "reason": "Allen and Moore have repeatedly worked together in camp, then connected on multiple chunk plays in the preseason opener, supporting Moore's immediate integration into the first-team passing game.",
-          "relationship": "same_offense"
-        },
-        {
-          "confidence": 0.57,
-          "delta": -1.0,
-          "player_name": "Connor McGovern",
-          "reason": "McGovern's reported lower-body issue is a modest near-term availability concern for the starting center, though there is not yet evidence of a regular-season absence or material impact on Allen.",
-          "relationship": "same_offense"
+          "confidence": 0.55,
+          "delta": 0.5,
+          "player_name": "Will Shipley",
+          "reason": "Shipley remains behind Barkley and Bigsby but could see limited passing-down or change-of-pace work if the Eagles expand backfield rotation.",
+          "relationship": "same_backfield"
         }
       ],
-      "researched_at": "2026-08-21T15:49:56.262949+00:00",
-      "role_change": 0.04,
-      "summary": "Allen appears fully available after January right-foot surgery for a fractured fifth metatarsal: he completed all of training camp, practiced August 18, and played efficiently with the first offense in the August 15 preseason opener (6-of-8, 111 yards, TD). Joe Brady's promotion creates a head-coach transition, but the offensive system/play-caller continuity and early chemistry with new WR D.J. Moore are modest positives. Connor McGovern's lower-body issue is a minor offensive-line watch item, not yet an Allen availability concern."
+      "researched_at": "2026-08-21T19:01:24.471914+00:00",
+      "role_change": -0.1,
+      "summary": "Barkley remains Philadelphia's clear RB1 and is listed active with no reported injury or missed-practice concern. Recent camp reports show explosive rushing and receiving plays, while the Eagles' new Sean Mannion offense is expected to feature wide-zone concepts that fit Barkley's strengths. However, Tank Bigsby is firmly established as the No. 2 back and reports indicate Philadelphia may manage Barkley's workload after his heavy recent touch volume, creating modest downside to his prior near-workhorse projection. [route: luna (deep=0.23); ADP near upcoming selection]"
     },
     "4242335": {
-      "availability_risk": 0.16,
+      "availability_risk": 0.04,
       "category": "role",
-      "confidence": 0.87,
-      "direct_delta": -2.0,
+      "confidence": 0.9,
+      "direct_delta": -1.0,
       "distraction_risk": 0.01,
       "espn_id": 4242335,
       "evidence": [
         {
-          "claim": "Running backs coach DeAndre Smith said the Colts need to find another back or two to take carries from Taylor to keep him available; Shane Steichen also said Taylor is difficult to remove when he is running well. The report notes Taylor handled 323 of the Colts' 372 RB carries in 2025.",
-          "published_at": "2026-08-18",
-          "reliability": 0.91,
+          "claim": "Taylor was participating at the end of training camp, and the Colts described the offense as being built around both Daniel Jones and Jonathan Taylor; no Taylor injury limitation was reported.",
+          "published_at": "2026-08-20T19:34:00",
+          "reliability": 0.97,
+          "source": "Indianapolis Colts",
+          "title": "The 5 biggest things we learned during Colts training camp",
+          "url": "https://www.colts.com/news/the-5-biggest-things-we-learned-during-colts-training-camp"
+        },
+        {
+          "claim": "Colts running backs coach DeAndre Smith said the team wants to find another back or two to take carries from Taylor to help preserve his availability; Taylor had 323 of Indianapolis' 372 RB carries in 2025.",
+          "published_at": "2026-07-09",
+          "reliability": 0.95,
           "source": "NFL.com",
           "title": "Colts aiming to 'take some of that workload off' RB Jonathan Taylor in 2026",
           "url": "https://www.nfl.com/news/colts-aiming-to-take-some-of-that-workload-off-rb-jonathan-taylor-in-2026"
         },
         {
-          "claim": "The official preseason depth chart lists Taylor first at running back, followed by DJ Giddens and Seth McGowan.",
-          "published_at": "2026-08-17T12:25:00-04:00",
+          "claim": "Indianapolis officially extended Taylor, keeping him with the franchise beyond 2026 and reinforcing his status as a core offensive player.",
+          "published_at": "2026-08-06T14:58:00",
           "reliability": 0.98,
-          "source": "Indianapolis Colts",
-          "title": "Colts release unofficial depth chart for preseason Week 2 game vs. Atlanta Falcons",
-          "url": "https://www.colts.com/news/colts-release-unofficial-depth-chart-for-preseason-week-2-game-vs-atlanta-falcons"
-        },
-        {
-          "claim": "Taylor participated in the joint practice and scored a rushing touchdown in red-zone drills; DJ Giddens did not participate because of a hamstring injury.",
-          "published_at": "2026-08-11T14:10:00-04:00",
-          "reliability": 0.94,
-          "source": "Indianapolis Colts",
-          "title": "Training Camp Notebook: Daniel Jones, Tyler Warren shine as joint practice with Patriots ends on a high note",
-          "url": "https://www.colts.com/news/training-camp-notebook-daniel-jones-tyler-warren-shine-as-joint-practice-with-patriots-ends-on-a-high-note"
-        },
-        {
-          "claim": "Indianapolis signed Taylor to an extension, resolving his prior pending-contract situation and keeping him with the club long term.",
-          "published_at": "2026-08-06T14:58:00-04:00",
-          "reliability": 0.99,
           "source": "Indianapolis Colts",
           "title": "Colts sign RB Jonathan Taylor to contract extension",
           "url": "https://www.colts.com/news/colts-sign-rb-jonathan-taylor-to-contract-extension"
         },
         {
-          "claim": "With Giddens sidelined by a hamstring injury, rookie Seth McGowan received first- and second-team work and flashed, though the team identified pass protection as a remaining factor in determining his offensive role.",
-          "published_at": "2026-08-10T14:51:00-04:00",
-          "reliability": 0.92,
+          "claim": "The extension is reported as two years and $44 million, worth up to $47 million with $39 million guaranteed, removing the previously possible contract-dispute or holdout risk.",
+          "published_at": "2026-08-06T08:11:00",
+          "reliability": 0.96,
+          "source": "NFL.com",
+          "title": "NFL Network: Colts, RB Jonathan Taylor agree to terms on two-year, $44 million contract extension",
+          "url": "https://amp.nfl.com/news/jonathan-taylor-colts-contract-extension"
+        },
+        {
+          "claim": "Taylor is listed first at running back, with DJ Giddens second and Seth McGowan among the next backs, confirming Taylor's uncontested RB1 role entering the season.",
+          "published_at": "2026-08-21",
+          "reliability": 0.97,
           "source": "Indianapolis Colts",
-          "title": "The encouraging trend for Colts' offense, Laiatu Latu keeps flashing, DeForest Buckner trending in right direction & more from first 2 weeks of training camp",
-          "url": "https://www.colts.com/news/the-encouraging-trend-for-colts-offense-laiatu-latu-keeps-flashing-deforest-buckner-trending-in-right-direction-more-from-first-2-weeks-of-training-camp"
+          "title": "Colts Depth Chart",
+          "url": "https://www.colts.com/team/depth-chart"
+        },
+        {
+          "claim": "The Colts' offensive line earned PFF's fourth-highest grade in 2025 and returns a largely homegrown unit, providing a stable run-blocking environment despite right-side personnel changes.",
+          "published_at": "2026-05-06T21:04:00",
+          "reliability": 0.91,
+          "source": "Indianapolis Colts",
+          "title": "How O-line coach Tony Sparano Jr. has become a team-building weapon for Colts",
+          "url": "https://www.colts.com/news/tony-sparano-jr-draft-picks-offensive-line-third-fourth-round-roster-construction-jalen-travis-tanor-bortolini-jalen-farmer-matt-goncalves"
         }
       ],
       "injury_change": 0.0,
-      "model": "gpt-5.6-terra",
+      "model": "gpt-5.6-luna",
       "player_name": "Jonathan Taylor",
-      "raw_response_id": "resp_0c5a399eb6281cdc006a88730b082887d29a5a112bf3343df3",
+      "raw_response_id": "resp_07e3f0848af7be03006a889e8b710087d2877f737b5d2e6ef8",
       "related_players": [
         {
-          "confidence": 0.69,
-          "delta": 2.0,
+          "confidence": 0.86,
+          "delta": 3.0,
           "player_name": "DJ Giddens",
-          "reason": "He is officially listed as Taylor's No. 2 back, and the club's stated desire to reduce Taylor's workload creates a plausible path to more complementary carries. His current hamstring issue limits confidence and could delay that role.",
+          "reason": "Giddens is listed as Taylor's direct backup and is the most likely beneficiary if Indianapolis follows through on its stated plan to reduce Taylor's carry load or if Taylor misses time.",
           "relationship": "direct_backup"
         },
         {
-          "confidence": 0.61,
-          "delta": 2.0,
-          "player_name": "Seth McGowan",
-          "reason": "Taylor workload-management plans create contingent opportunity, and McGowan has received elevated first- and second-team reps while Giddens has been sidelined. He remains behind Giddens on the official depth chart and still must prove pass protection.",
-          "relationship": "same_backfield"
-        },
-        {
-          "confidence": 0.63,
+          "confidence": 0.55,
           "delta": 1.0,
-          "player_name": "Daniel Jones",
-          "reason": "Recent camp and joint-practice reports indicate Jones has looked healthy and efficient after his Achilles recovery, supporting the Colts offensive environment that can sustain Taylor's scoring opportunities.",
-          "relationship": "quarterback"
+          "player_name": "Seth McGowan",
+          "reason": "McGowan is listed among the next Colts running backs and was specifically identified as a potential camp challenger for rotational snaps, giving him a smaller path to value if the team expands its backfield rotation.",
+          "relationship": "same_backfield"
         }
       ],
-      "researched_at": "2026-08-21T15:48:02.381164+00:00",
-      "role_change": -0.15,
-      "summary": "Taylor is healthy and entrenched as Indianapolis' RB1, with recent joint-practice red-zone work and the official depth chart confirming no current availability issue. His August extension eliminates contract uncertainty, but the Colts have explicitly discussed reducing his 323-carry 2025 workload by finding one or two backs to absorb more touches; that creates a modest volume downside versus a repeat of last season's extreme share."
+      "researched_at": "2026-08-21T18:53:28.323984+00:00",
+      "role_change": -0.12,
+      "summary": "Jonathan Taylor remains Indianapolis' clear RB1 and is healthy/active through the end of 2026 training camp. The Colts extended him on August 6, eliminating contract-related availability concerns, but coaches have explicitly said they want DJ Giddens or another back to absorb some carries after Taylor handled 323 of the team's 372 RB carries in 2025. Taylor should still retain an elite workload, with the main adjustment being modest downside to his prior near-total workload assumption. [route: luna (deep=0.28); top-10 current board candidate; ADP near upcoming selection]"
     },
     "4362628": {
-      "availability_risk": 0.04,
-      "category": "news",
+      "availability_risk": 0.03,
+      "category": "team_environment",
       "confidence": 0.9,
-      "direct_delta": 0.0,
+      "direct_delta": 2.0,
       "distraction_risk": 0.01,
       "espn_id": 4362628,
       "evidence": [
         {
-          "claim": "Head coach Zac Taylor characterized Chase's absence from that practice as a maintenance day; no injury designation or timetable was attached.",
-          "published_at": "2026-08-06T10:35:00",
-          "reliability": 0.94,
+          "claim": "Chase had a scheduled maintenance day and did not practice; the report did not identify an injury or recovery concern.",
+          "published_at": "2026-08-06",
+          "reliability": 0.95,
           "source": "Cincinnati Bengals",
           "title": "Key Takeaways from Zac Taylor's August 6 Press Conference",
           "url": "https://www.bengals.com/news/key-takeaways-zac-taylor-august-6-press-conference"
         },
         {
-          "claim": "Chase worked with Burrow in camp, making contested deep-dig and out-route catches and taking a jet sweep for a first down; the initial depth chart listed Mitch Tinsley behind Chase.",
-          "published_at": "2026-08-10T06:34:00",
-          "reliability": 0.9,
+          "claim": "Joe Burrow connected with Chase on a 50-yard explosive play during the stadium practice, supporting continuity and downfield upside entering 2026.",
+          "published_at": "2026-08-08",
+          "reliability": 0.94,
           "source": "Cincinnati Bengals",
-          "title": "Training Camp Report | Joe Burrow Oversees Offense-Defense Slugfest",
-          "url": "https://www.bengals.com/news/training-camp-report-joe-burrw-joe-flacco"
+          "title": "Training Camp Report | Back With Fans, Burrow And Chase Send Calling Card To 2026",
+          "url": "https://www.bengals.com/news/back-with-fans-burrow-and-chase-send-calling-card-to-2026"
         },
         {
-          "claim": "Chase played in Cincinnati's preseason opener with the starting offense and caught his only target for 16 yards, supporting normal preseason availability.",
+          "claim": "Chase started the preseason opener, caught a 16-yard pass from Burrow on an under-center play-action throw, and exited without a reported injury.",
           "published_at": "2026-08-13",
-          "reliability": 0.76,
-          "source": "CBS Sports / RotoWire",
-          "title": "Ja'Marr Chase, Cincinnati Bengals, WR - News, Stats, Bio",
-          "url": "https://www.cbssports.com/nfl/players/2966320/jamarr-chase/"
+          "reliability": 0.96,
+          "source": "Cincinnati Bengals",
+          "title": "Bengals Lions Postgame Recap Stats, Notes and Quotes",
+          "url": "https://www.bengals.com/news/bengals-lions-recap-postgame-preseason-week-1-2026-notes-quotes-stats"
         },
         {
-          "claim": "Cincinnati signed Chase to a four-year extension through the 2029 season, so there is no current contract-year or holdout issue.",
-          "published_at": "2025-03-18T15:44:00",
+          "claim": "Official NFL logs show Chase played in Cincinnati's August 13 preseason game and recorded one reception for 16 yards.",
+          "published_at": "2026-08-15",
+          "reliability": 0.98,
+          "source": "NFL.com",
+          "title": "Ja'Marr Chase 2026 Logs Stats",
+          "url": "https://www.nfl.com/players/ja-marr-chase/stats/logs/2026/"
+        },
+        {
+          "claim": "Chase signed a four-year extension through the 2029 season, eliminating a current contract or holdout concern for 2026.",
+          "published_at": "2025-03-18",
           "reliability": 0.98,
           "source": "Cincinnati Bengals",
-          "title": "Bengals Sign WR Ja'Marr Chase to Contract Extension | Bengals Roster Update",
+          "title": "Bengals Extend WR Ja'Marr Chase",
           "url": "https://www.bengals.com/news/bengals-extend-jamarr-chase-2025-roster-update"
         }
       ],
-      "injury_change": 0.02,
-      "model": "gpt-5.6-terra",
+      "injury_change": -0.05,
+      "model": "gpt-5.6-luna",
       "player_name": "Ja'Marr Chase",
-      "raw_response_id": "resp_02724b6fb1ea71f5006a8873cb1f5887d2a99afb4c283ae416",
+      "raw_response_id": "resp_0575f34417b19ca1006a889f0adf3087d2aa96eb169b5c1673",
+      "related_players": [
+        {
+          "confidence": 0.9,
+          "delta": 2.0,
+          "player_name": "Joe Burrow",
+          "reason": "Burrow is healthy, practicing with Chase, and already connected with him on an explosive play and a preseason completion, supporting the Bengals' passing-game environment.",
+          "relationship": "quarterback"
+        },
+        {
+          "confidence": 0.8,
+          "delta": 1.0,
+          "player_name": "Tee Higgins",
+          "reason": "Higgins is also practicing and playing with the first-team offense, indicating a healthy, intact elite receiver duo and a potentially strong overall Cincinnati passing environment.",
+          "relationship": "same_offense"
+        }
+      ],
+      "researched_at": "2026-08-21T18:55:29.294801+00:00",
+      "role_change": 0.03,
+      "summary": "Ja'Marr Chase has no reported current injury, is active, entrenched as Cincinnati's top receiver, and participated with Joe Burrow and Tee Higgins in the preseason opener on August 13, 2026. A single August 6 maintenance day was reported without an injury designation. Training-camp reports consistently describe strong Burrow-Chase connection, while Chase's contract is secured through 2029. Current context is modestly positive, primarily from Burrow's health and continuity, but most of that benefit is likely already reflected in the quantitative baseline. [route: luna (deep=0.23); top-10 current board candidate]"
+    },
+    "4374302": {
+      "availability_risk": 0.06,
+      "category": "role",
+      "confidence": 0.86,
+      "direct_delta": 1.0,
+      "distraction_risk": 0.01,
+      "espn_id": 4374302,
+      "evidence": [
+        {
+          "claim": "St. Brown opened camp as a first-team receiver and repeatedly connected with Jared Goff, including a difficult sideline catch and multiple successful underneath receptions.",
+          "published_at": "2026-07-29",
+          "reliability": 0.92,
+          "source": "DetroitLions.com",
+          "title": "Observations from Day 1 of Detroit Lions training camp practice",
+          "url": "https://www.detroitlions.com/news/detroit-lions-training-camp-day-1-observations-goff-miller-stbrown"
+        },
+        {
+          "claim": "In first-team scrimmage work, Goff opened with an 8-yard play-action completion to St. Brown and later looked to him in the red zone, confirming continued featured usage.",
+          "published_at": "2026-08-07",
+          "reliability": 0.83,
+          "source": "Pride Of Detroit",
+          "title": "Lions training camp scrimmage notes: UDFA shines among strong LB performance",
+          "url": "https://www.prideofdetroit.com/detroit-lions-training-camp/168632/lions-training-camp-scrimmage-notes-udfa-shines-among-strong-lb-performance"
+        },
+        {
+          "claim": "St. Brown exited after warmups or individual work during a scaled-back veteran-rest practice; the report characterized this as rest rather than an injury and noted no ongoing limitation.",
+          "published_at": "2026-08-09",
+          "reliability": 0.82,
+          "source": "Pride Of Detroit",
+          "title": "Detroit Lions training camp observations, Day 9: Veteran rest opens door for reserves",
+          "url": "https://www.prideofdetroit.com/detroit-lions-training-camp/168756/detroit-lions-2026-training-camp-observations-day-9-veteran-rest-opens-door-for-reserves"
+        },
+        {
+          "claim": "Detroit is transitioning to new offensive coordinator Drew Petzing, but Goff reported that the offense had begun coming together after several practices; St. Brown remains part of the team's core offensive group.",
+          "published_at": "2026-08-11",
+          "reliability": 0.92,
+          "source": "DetroitLions.com",
+          "title": "Goff talks new offense under Petzing, Williams' development & more",
+          "url": "https://www.detroitlions.com/news/goff-talks-new-offense-under-petzing-williams-development-more"
+        },
+        {
+          "claim": "Drew Petzing replaced John Morton as offensive coordinator and play caller, creating a legitimate but currently unquantified scheme-transition variable for St. Brown's 2026 usage.",
+          "published_at": "2026-02-23",
+          "reliability": 0.95,
+          "source": "DetroitLions.com",
+          "title": "Lions announce 2026 coaching staff",
+          "url": "https://www.detroitlions.com/news/lions-announce-2026-coaching-staff"
+        },
+        {
+          "claim": "St. Brown has no recorded preseason game statistics through Detroit's first preseason game, consistent with the team's decision to rest most starters rather than evidence of an injury or role downgrade.",
+          "published_at": "2026-08-15",
+          "reliability": 0.96,
+          "source": "NFL.com",
+          "title": "Amon-Ra St. Brown 2026 Logs Stats",
+          "url": "https://www.nfl.com/players/amon-ra-st-brown/stats/logs/2026/"
+        }
+      ],
+      "injury_change": 0.0,
+      "model": "gpt-5.6-luna",
+      "player_name": "Amon-Ra St. Brown",
+      "raw_response_id": "resp_0baf9916b1a2b7d0006a889f994aa887d2b5117579c033c7c1",
       "related_players": [],
-      "researched_at": "2026-08-21T15:51:08.009940+00:00",
-      "role_change": 0.02,
-      "summary": "No material negative 2026 draft-context development found. Chase had a scheduled Aug. 6 maintenance day, then resumed visible first-team work, was listed atop the WR depth chart, and played with the starters in the Aug. 13 preseason opener (1 catch, 16 yards). His contract runs through 2029, eliminating a current holdout/contract-dispute concern. Camp reports show his usual outside/intermediate work plus jet-sweep usage, with no evidence of a reduced role or injury limitation."
+      "researched_at": "2026-08-21T18:57:56.935819+00:00",
+      "role_change": 0.05,
+      "summary": "Amon-Ra St. Brown has been a healthy, consistent first-team participant throughout 2026 minicamp and training camp, maintaining strong chemistry with Jared Goff and serving as a featured target in Detroit's scrimmage work. He was rested during one lighter veteran practice but there is no reported injury or workload restriction. The main variable is Detroit's new offensive coordinator, Drew Petzing; early reports indicate the offense is being built around its established core and that implementation is progressing well. [route: luna (deep=0.21); ADP near upcoming selection]"
     },
     "4379399": {
-      "availability_risk": 0.05,
-      "category": "role",
-      "confidence": 0.82,
-      "direct_delta": 1.0,
+      "availability_risk": 0.06,
+      "category": "opportunity",
+      "confidence": 0.84,
+      "direct_delta": 2.0,
       "distraction_risk": 0.01,
       "espn_id": 4379399,
       "evidence": [
         {
-          "claim": "Head coach Joe Brady said all healthy players, including the starters, were expected to play in the preseason opener; Cook subsequently participated, providing no indication that he was among Buffalo's camp injury concerns.",
-          "published_at": "2026-08-13T15:19:00",
-          "reliability": 0.94,
+          "claim": "Offensive coordinator Pete Carmichael said Cook can add value in the passing game; Ty Johnson exited practice with a knee issue, potentially forcing Cook into more third-down snaps if Johnson remains limited. Joe Brady has also discussed taking some work off Cook's plate after his heavy 2025 workload.",
+          "published_at": "2026-08-11",
+          "reliability": 0.86,
+          "source": "CBS Sports/RotoWire",
+          "title": "Bills' James Cook: Could get more passing-game work",
+          "url": "https://www.cbssports.com/fantasy/football/news/bills-james-cook-could-get-more-passing-game-work/"
+        },
+        {
+          "claim": "Cook opened team drills with a first-down run and then made a positive gain on a screen pass, providing recent evidence of continued involvement in both the rushing and receiving portions of the offense.",
+          "published_at": "2026-08-08",
+          "reliability": 0.95,
           "source": "Buffalo Bills",
-          "title": "What we learned about the Bills on Day 11 of Training Camp 2026",
-          "url": "https://www.buffalobills.com/news/what-we-learned-about-the-bills-on-day-11-of-training-camp-2026"
+          "title": "Return of Blue & Red: Bills players reaction to Highmark Stadium, practice observations and more",
+          "url": "https://www.buffalobills.com/news/return-of-blue-red-bills-players-reaction-to-highmark-stadium-practice-observations-and-more"
         },
         {
-          "claim": "Cook rushed five times for 21 yards against Carolina on August 15.",
-          "published_at": "2026-08-16T00:00:00",
-          "reliability": 0.78,
-          "source": "FantasyGuru",
-          "title": "Bills | James Cook given five carries",
-          "url": "https://www.fantasyguru.com/bills-james-cook-given-five-carries"
+          "claim": "Buffalo's healthy starters were being ramped toward substantial joint-practice workloads, and the report did not identify a new Cook injury or absence. Ty Johnson remained a subject of the team's current injury-management discussion entering the second preseason game.",
+          "published_at": "2026-08-20",
+          "reliability": 0.93,
+          "source": "Buffalo Bills",
+          "title": "What we learned from the Bills' joint practice with the Browns",
+          "url": "https://www.buffalobills.com/news/what-we-learned-from-the-bills-joint-practice-with-the-browns"
         },
         {
-          "claim": "Cook worked with Buffalo's first-team offense for 15 snaps over its two opening possessions, confirming his first-unit role entering the season.",
-          "published_at": "2026-08-15T00:00:00",
-          "reliability": 0.79,
-          "source": "Sports Illustrated",
-          "title": "Everything Preseason Opener Snap Counts Taught Us About Joe Brady's Buffalo Bills",
-          "url": "https://www.si.com/nfl/bills/onsi/preseason-everything-opener-snap-counts-taught-us-about-joe-brady-buffalo-bills-vs-panthers"
-        },
-        {
-          "claim": "Cook started and played the entire first quarter before Davis entered; the report also noted Pete Carmichael's suggestion that Cook could be used more as a receiver in 2026.",
-          "published_at": "2026-08-15T20:09:00",
-          "reliability": 0.76,
-          "source": "CBS Sports",
-          "title": "Bills' Ray Davis: Seven touches in preseason opener",
-          "url": "https://www.games.cbssports.com/fantasy/football/news/bills-ray-davis-seven-touches-in-preseason-opener/"
-        },
-        {
-          "claim": "Cook signed a four-year extension that keeps him under contract through the 2029 season, removing the prior contract dispute as a 2026 availability or distraction concern.",
-          "published_at": "2025-08-13T09:30:00",
-          "reliability": 0.97,
+          "claim": "Cook signed a four-year extension through the 2029 season, eliminating the prior hold-in and contract-dispute risk for the 2026 season.",
+          "published_at": "2025-08-13",
+          "reliability": 0.98,
           "source": "Buffalo Bills",
           "title": "Two-time Pro Bowl RB James Cook signs four-year contract extension with Buffalo Bills",
           "url": "https://www.buffalobills.com/news/two-time-pro-bowl-rb-james-cook-signs-four-year-contract-extension-with-buffalo-bills"
+        },
+        {
+          "claim": "Brady's Buffalo offenses had averaged 145.4 rushing yards per game and 29.6 points per game since he became offensive coordinator, supporting a strong team environment for the lead running back despite the possibility of more balanced workload management.",
+          "published_at": "2026-01-27",
+          "reliability": 0.95,
+          "source": "Buffalo Bills",
+          "title": "Joe Brady agrees to terms to be the next Buffalo Bills head coach",
+          "url": "https://www.buffalobills.com/news/joe-brady-agrees-to-terms-to-be-the-next-buffalo-bills-head-coach"
         }
       ],
       "injury_change": 0.0,
-      "model": "gpt-5.6-terra",
+      "model": "gpt-5.6-luna",
       "player_name": "James Cook III",
-      "raw_response_id": "resp_0cfea3c38c7aca58006a8873a49fbc87d285cfbca475dfbe0f",
+      "raw_response_id": "resp_04c8ca36fa0e62b2006a889ee4804087d298e3a279b4613aac",
       "related_players": [
         {
-          "confidence": 0.7,
-          "delta": -1.0,
+          "confidence": 0.78,
+          "delta": -1.5,
+          "player_name": "Ty Johnson",
+          "reason": "Johnson has a knee/lower-body issue and no firm return timetable; if limited into the season, his pass-catching and third-down role could shift to Cook, reducing Johnson's projected usage.",
+          "relationship": "same_backfield"
+        },
+        {
+          "confidence": 0.62,
+          "delta": 0.8,
           "player_name": "Ray Davis",
-          "reason": "Cook's first-quarter starter usage reinforces Davis as the contingency back rather than a co-lead. Davis remains relevant as the next back into the game and could retain some passing-down work.",
+          "reason": "Davis remains Cook's primary rushing understudy and could gain a small amount of passing-down or change-of-pace work if Ty Johnson is unavailable, though Cook is more likely to absorb the highest-value receiving opportunities.",
           "relationship": "direct_backup"
         }
       ],
-      "researched_at": "2026-08-21T15:50:34.964809+00:00",
+      "researched_at": "2026-08-21T18:55:06.786476+00:00",
       "role_change": 0.12,
-      "summary": "Cook has shown no current injury or contract-related limitation: he was cleared among Buffalo's healthy starters, started the August 15 preseason opener, and handled five carries across the first-quarter work with the starting offense. He remains the clear RB1, while the Joe Brady/Pete Carmichael staff has indicated interest in expanding his receiving usage; that is a modest upside possibility rather than a confirmed workload increase. Ray Davis remains the primary contingency and showed receiving involvement after Cook exited."
+      "summary": "James Cook has no reported injury limitation and has remained active through Buffalo's 2026 camp and preseason buildup. The main actionable development is a potential increase in receiving and third-down work: offensive staff have discussed getting Cook more involved as a pass catcher, while pass-catching specialist Ty Johnson has been dealing with a knee/lower-body issue with no firm return timetable. Joe Brady has also indicated Buffalo may reduce Cook's between-the-tackles workload after his heavy 2025 usage, which slightly caps rushing-volume upside but could preserve overall touches through the air. His 2025 contract dispute is resolved through 2029. [route: luna (deep=0.30); top-10 current board candidate; ADP near upcoming selection]"
     },
     "4426515": {
-      "availability_risk": 0.32,
+      "availability_risk": 0.28,
       "category": "injury",
-      "confidence": 0.78,
-      "direct_delta": -4.0,
-      "distraction_risk": 0.25,
+      "confidence": 0.84,
+      "direct_delta": -3.5,
+      "distraction_risk": 0.18,
       "espn_id": 4426515,
       "evidence": [
         {
-          "claim": "McVay said Nacua missed another practice with continuing psoas soreness, with the Rams taking the situation day by day and erring on the side of caution; he indicated the club needs him to get practice time before the regular season.",
-          "published_at": "2026-08-17T13:18:00-07:00",
-          "reliability": 0.96,
-          "source": "Los Angeles Rams",
-          "title": "Injury Updates: Sean McVay provides latest on Myles Garrett (knee) and Puka Nacua (psoas), Keagen Trost and Mario Williams both dealing with hamstring injury",
-          "url": "https://www.therams.com/news/injury-updates-sean-mcvay-provides-latest-on-myles-garrett-knee-and-puka-nacua-psoas-keagen-trost-and-mario-williams-both-dealing-with-hamstring-injury"
+          "claim": "Nacua did not participate in the Rams' August 20 joint practice with New Orleans and has been a spectator since leaving the August 11 Cowboys session; his next chance to return is expected to be the following week.",
+          "published_at": "2026-08-20",
+          "reliability": 0.82,
+          "source": "CBS Sports/Rotowire",
+          "title": "Still sidelined at practice",
+          "url": "https://1028.racing.cbssports.com/nfl/players/3121687/puka-nacua/fantasy/"
         },
         {
-          "claim": "Nacua remained out of practice August 18 and was working on the side with a Rams training-staff member.",
-          "published_at": "2026-08-18T13:58:00-04:00",
-          "reliability": 0.8,
-          "source": "FantasyPros / Sarah Barshop report",
-          "title": "Puka Nacua (groin) still not practicing Tuesday",
-          "url": "https://www.fantasypros.com/nfl/news/603026/puka-nacua-groin-still-not-practicing-tuesday.php"
-        },
-        {
-          "claim": "McVay identified the issue as psoas soreness after Nacua exited the Cowboys joint practice early and initially characterized the team as being smart/cautious with him.",
-          "published_at": "2026-08-13T14:13:00-07:00",
-          "reliability": 0.96,
+          "claim": "Sean McVay identified psoas soreness, said Nacua was working out on the side, and expected him to return to practice the following week.",
+          "published_at": "2026-08-13",
+          "reliability": 0.97,
           "source": "Los Angeles Rams",
           "title": "McVay: Puka Nacua dealing with soreness in psoas, but expected to be back at practice next week 'ready to go'",
           "url": "https://www.therams.com/news/rams-puka-nacua-injury-update-cowboys-joint-practice-psoas"
         },
         {
-          "claim": "Nacua said he completed a short rehab stint, has worked with a team therapist and attended weekly meetings; he had not missed offseason workouts. The report also states he remains in the final year of his rookie contract without an extension.",
-          "published_at": "2026-05-28T19:31:00-07:00",
-          "reliability": 0.93,
-          "source": "Associated Press via NFL.com",
-          "title": "Rams WR Puka Nacua says rehab, meetings have provided 'great improvement' in his life",
-          "url": "https://www.nfl.com/news/rams-wr-puka-nacua-says-rehab-meetings-have-provided-great-improvement-in-his-life"
+          "claim": "Nacua left the August 11 joint practice early, missed the August 13 workout, and was diagnosed with psoas muscle soreness; McVay characterized the approach as precautionary and expected a next-week return.",
+          "published_at": "2026-08-13",
+          "reliability": 0.95,
+          "source": "Associated Press via The Washington Post",
+          "title": "Rams All-Pro Puka Nacua misses practice with muscle soreness. McVay expects him to return next week",
+          "url": "https://www.washingtonpost.com/sports/nfl/2026/08/13/rams-puka-nacua/a7fb78e2-9753-11f1-9ef9-1be722184483_story.html"
         },
         {
-          "claim": "The report says Nacua faces a civil suit over New Year's Eve allegations; his attorney acknowledged a bite occurred but disputed the plaintiff's characterization. It also reported that a possible misdemeanor matter was on track for pre-filing diversion rather than prosecution.",
-          "published_at": "2026-07-23T03:00:00-07:00",
-          "reliability": 0.9,
-          "source": "Los Angeles Times",
-          "title": "Puka Nacua\u2019s attorney questions authenticity of bite marks in photo produced by accuser",
-          "url": "https://www.latimes.com/sports/story/2026-07-23/puka-nacua-attorney-questions-authenticity-of-bite-marks-color-photo-lawsuit"
+          "claim": "No NFL punishment had been announced, but Schefter said a suspension remained possible and that Nacua could potentially miss the September 10 Week 1 game against San Francisco.",
+          "published_at": "2026-08-11",
+          "reliability": 0.88,
+          "source": "NBC Bay Area citing ESPN's Adam Schefter",
+          "title": "Puka Nacua suspension still possible, per Adam Schefter",
+          "url": "https://www.nbcbayarea.com/news/sports/nfl/san-francisco-49ers/puka-nacua-suspension-adam-schefter/4126705/"
+        },
+        {
+          "claim": "Nacua participated in training camp despite entering the final year of his rookie contract; the Rams and NFL have discussed his offseason conduct, and a league suspension remains possible.",
+          "published_at": "2026-07-30",
+          "reliability": 0.95,
+          "source": "Associated Press via NFL.com",
+          "title": "Puka Nacua says he never considered contract holdout while rebuilding reputation with Rams",
+          "url": "https://www.nfl.com/news-migrated-v2/puka-nacua-never-considered-contract-holdout-rebuilds-reputation-rams"
+        },
+        {
+          "claim": "The civil case remains active, with mediation offered and a trial date set for March 27, 2028; this does not create a known near-term game absence but confirms the legal matter remains unresolved.",
+          "published_at": "2026-08-18",
+          "reliability": 0.72,
+          "source": "MyNewsLA",
+          "title": "Judge Offers Mediation Service to Puka Nacua, Woman",
+          "url": "https://mynewsla.com/crime/2026/08/18/judge-offers-mediation-service-to-puka-nacua-woman/"
         }
       ],
-      "injury_change": -0.36,
-      "model": "gpt-5.6-terra",
+      "injury_change": -0.22,
+      "model": "gpt-5.6-luna",
       "player_name": "Puka Nacua",
-      "raw_response_id": "resp_0758a448d6037207006a8873586cc087d2bcf882c018fabde2",
+      "raw_response_id": "resp_048c730469ebacd1006a889f2160a087d2b92c0aba168fe51a",
       "related_players": [
         {
-          "confidence": 0.78,
-          "delta": 2.0,
+          "confidence": 0.83,
+          "delta": 2.5,
           "player_name": "Davante Adams",
-          "reason": "Adams would be the primary beneficiary of additional first-team targets if Nacua's psoas issue lingers into games or causes any missed time.",
+          "reason": "If Nacua misses practices, Week 1, or additional games because of the psoas issue or discipline, Adams should receive a larger target and route burden in the Rams' passing offense.",
           "relationship": "target_competitor"
         },
         {
-          "confidence": 0.62,
-          "delta": 1.0,
+          "confidence": 0.58,
+          "delta": 1.5,
           "player_name": "Jordan Whittington",
-          "reason": "Whittington is a plausible next-man-up receiver for additional routes and targets if Nacua misses preseason preparation or regular-season snaps.",
+          "reason": "Nacua's absence would open additional receiver snaps and routes behind Adams; Whittington has been part of the Rams' competing receiver group and could benefit if the absence extends into the regular season.",
+          "relationship": "target_competitor"
+        }
+      ],
+      "researched_at": "2026-08-21T18:56:05.622437+00:00",
+      "role_change": 0.0,
+      "summary": "Puka Nacua remains sidelined as of August 20, 2026 after leaving the August 11 Rams-Cowboys joint practice with psoas/groin soreness. Sean McVay has continued to describe the issue as precautionary and expects Nacua back next week, but the missed practices have lasted longer than initially projected. Separate unresolved NFL discipline discussions create a non-zero chance of a short suspension, potentially including Week 1, while his contract situation has not produced a holdout or apparent role issue. [route: luna (deep=0.32); availability risk (28%); top-10 current board candidate]"
+    },
+    "4429160": {
+      "availability_risk": 0.18,
+      "category": "role",
+      "confidence": 0.86,
+      "direct_delta": 3.5,
+      "distraction_risk": 0.02,
+      "espn_id": 4429160,
+      "evidence": [
+        {
+          "claim": "NFL reported that Achane is the clear offensive alpha after the departures of Hill and Waddle, and that Miami expects him to handle an expanded role in 2026.",
+          "published_at": "2026-08-11",
+          "reliability": 0.94,
+          "source": "NFL.com",
+          "title": "Dolphins RB De'Von Achane 'ready' for expanded role as centerpiece of offense",
+          "url": "https://amp.nfl.com/news/dolphins-rb-de-von-achane-ready-for-expanded-role-as-centerpiece-of-offense"
+        },
+        {
+          "claim": "Head coach Jeff Hafley indicated that Achane should be prepared for a massive workload, reinforcing bell-cow usage expectations.",
+          "published_at": "2026-08-11",
+          "reliability": 0.86,
+          "source": "WPLG Local 10",
+          "title": "Hafley says massive workload coming for Achane",
+          "url": "https://www.local10.com/sports/local/2026/08/11/hafley-says-massive-workload-coming-for-achane-i-might-have-to-carry-him-back-to-the-locker-room/"
+        },
+        {
+          "claim": "NFL identified Miami as an offense that will lean heavily on Achane for both rushing and pass-catching production because of its limited established receiving corps.",
+          "published_at": "2026-08-02",
+          "reliability": 0.91,
+          "source": "NFL.com",
+          "title": "2026 NFL training camp: Takeaways from Back Together Weekend Sunday",
+          "url": "https://www.nfl.com/news/what-we-learned-back-together-weekend-sunday-2026-training-camp"
+        },
+        {
+          "claim": "Hafley said Achane had shoulder surgery after the 2025 season and was still rehabbing, participating in drills but not full-team work during OTAs.",
+          "published_at": "2026-05-27",
+          "reliability": 0.98,
+          "source": "MiamiDolphins.com",
+          "title": "Transcript: HC Jeff Hafley Press Conference - May 27",
+          "url": "https://www.miamidolphins.com/news/transcript-hc-jeff-hafley-press-conference-may-27"
+        },
+        {
+          "claim": "Miami extended Achane through the 2030 season, supporting the organization\u2019s commitment to him as a foundational offensive player.",
+          "published_at": "2026-05-20",
+          "reliability": 0.98,
+          "source": "MiamiDolphins.com",
+          "title": "Dolphins sign Achane to contract extension",
+          "url": "https://www.miamidolphins.com/news/dolphins-sign-achane-to-contract-extension"
+        },
+        {
+          "claim": "The Dolphins described Achane as the lead back after he handled 305 total touches in 2025; Ollie Gordon II had been used more in short yardage while Jaylen Wright filled in for Achane.",
+          "published_at": "2026-07-16",
+          "reliability": 0.97,
+          "source": "MiamiDolphins.com",
+          "title": "Training Camp Preview 2026: Running Backs",
+          "url": "https://www.miamidolphins.com/news/training-camp-preview-2026-running-backs"
+        }
+      ],
+      "injury_change": 0.15,
+      "model": "gpt-5.6-luna",
+      "player_name": "De'Von Achane",
+      "raw_response_id": "resp_0bdc2162a69e06dd006a889f7bb8a887d2a5e4f762f7c4ba1a",
+      "related_players": [
+        {
+          "confidence": 0.78,
+          "delta": -2.0,
+          "player_name": "Ollie Gordon II",
+          "reason": "Achane\u2019s expected centerpiece workload limits Gordon\u2019s weekly rushing and receiving volume, though Gordon retains potential short-yardage and contingency value.",
           "relationship": "direct_backup"
         },
         {
-          "confidence": 0.7,
-          "delta": -1.0,
-          "player_name": "Matthew Stafford",
-          "reason": "Any Nacua absence marginally removes an elite, established target from Stafford's passing-game ceiling, although Adams limits the magnitude of the effect.",
-          "relationship": "quarterback"
+          "confidence": 0.73,
+          "delta": -1.5,
+          "player_name": "Jaylen Wright",
+          "reason": "A healthy Achane with an expanded role reduces Wright\u2019s standalone workload, leaving him primarily dependent on change-of-pace usage or an Achane absence.",
+          "relationship": "direct_backup"
         }
       ],
-      "researched_at": "2026-08-21T15:49:17.403890+00:00",
-      "role_change": -0.03,
-      "summary": "Nacua has missed practice since leaving the August 11 joint workout with psoas/groin soreness and was still sidelined August 18; McVay has emphasized caution and pushed his expected return later than initially stated. This is not yet a projected regular-season absence, but it is a modest near-term availability downgrade. His unresolved civil/off-field matter remains a secondary distraction/discipline tail risk, while he has continued to participate in team activities and has not held out over his expiring rookie deal."
+      "researched_at": "2026-08-21T18:57:29.213415+00:00",
+      "role_change": 0.35,
+      "summary": "Achane appears fully recovered from offseason shoulder surgery and has participated in 2026 training camp without a reported setback. Miami has made him the clear offensive centerpiece after the departures of Tyreek Hill and Jaylen Waddle, with Jeff Hafley and Bobby Slowik publicly indicating an expanded workload and significant receiving involvement. The main offset is elevated workload and uncertainty from a new quarterback/coaching structure, but current evidence is net positive for his 2026 role. [route: luna (deep=0.33); ADP near upcoming selection]"
     },
     "4429795": {
       "availability_risk": 0.08,
-      "category": "opportunity",
-      "confidence": 0.87,
-      "direct_delta": 3.0,
-      "distraction_risk": 0.01,
+      "category": "role",
+      "confidence": 0.92,
+      "direct_delta": 3.5,
+      "distraction_risk": 0.03,
       "espn_id": 4429795,
       "evidence": [
         {
-          "claim": "Detroit officially announced a Gibbs extension through the 2030 season, ending the camp contract-related absence.",
-          "published_at": "2026-08-07T10:18:00",
-          "reliability": 0.99,
+          "claim": "Detroit identified Gibbs as its planned bell-cow back after David Montgomery's offseason departure, with Pacheco and Sione Vaki in reserve.",
+          "published_at": "2026-07-15",
+          "reliability": 0.96,
           "source": "Detroit Lions",
-          "title": "Lions sign RB Jahmyr Gibbs to contract extension through the 2030 season",
-          "url": "https://www.detroitlions.com/news/lions-sign-rb-jahmyr-gibbs-to-contract-extension-through-the-2030-season"
+          "title": "2026 training camp preview: Running back",
+          "url": "https://www.detroitlions.com/news/2026-detroit-lions-training-camp-preview-running-back-gibbs-pacheco-vaki"
         },
         {
-          "claim": "After signing his extension, Gibbs had returned to practice for consecutive days and made runs and receptions during situational team work.",
-          "published_at": "2026-08-09T16:21:00",
-          "reliability": 0.94,
-          "source": "Detroit Lions",
-          "title": "TWENTYMAN: Training camp Day 9 observations",
-          "url": "https://www.detroitlions.com/news/detroit-lions-training-camp-day-9-observations-gibbs-whiteside-bartch"
+          "claim": "Gibbs agreed to a three-year extension worth $67.5 million, with incentives raising the maximum to $75.75 million and $51.5 million guaranteed; the agreement ended the contract-related hold-in.",
+          "published_at": "2026-08-06",
+          "reliability": 0.98,
+          "source": "NFL.com",
+          "title": "NFL Network: Lions signing RB Jahmyr Gibbs to three-year, $75.75 million contract extension",
+          "url": "https://amp.nfl.com/news/jahmyr-gibbs-lions-contract-extension"
         },
         {
-          "claim": "Following David Montgomery's offseason trade, the Lions characterized Gibbs as the bell-cow for Detroit's run game.",
-          "published_at": "2026-07-06T07:00:00",
-          "reliability": 0.92,
-          "source": "Detroit Lions",
-          "title": "Where Lions' roster stands heading into 2026 training camp",
-          "url": "https://www.detroitlions.com/news/where-detroit-lions-roster-stands-2026-nfl-training-camp-goff-gibbs-stbrown"
-        },
-        {
-          "claim": "Gibbs was initially limited while working through a minor back injury and awaiting a new contract; he participated in walkthrough work before moving to side work.",
-          "published_at": "2026-08-06T14:47:00",
-          "reliability": 0.94,
+          "claim": "Gibbs made his first camp appearance in uniform after missing early practices while dealing with a minor back issue and the contract situation, though he was initially limited and worked with a trainer.",
+          "published_at": "2026-08-06",
+          "reliability": 0.96,
           "source": "Detroit Lions",
           "title": "Observations from Day 7 of Detroit Lions training camp practice",
           "url": "https://www.detroitlions.com/news/detroit-lions-training-camp-day-7-observations-gibbs-goff-williams"
         },
         {
-          "claim": "Offensive coordinator Drew Petzing said the team expected Gibbs to be ready despite his early-camp absence, while also highlighting Pacheco as part of the backfield.",
-          "published_at": "2026-08-06T17:25:00",
-          "reliability": 0.82,
+          "claim": "After signing his extension, Gibbs returned to team periods and produced notable plays as a runner and receiver, including a first-down catch from Jared Goff and a sideline conversion.",
+          "published_at": "2026-08-09",
+          "reliability": 0.96,
+          "source": "Detroit Lions",
+          "title": "Observations from Day 9 of Detroit Lions training camp practice",
+          "url": "https://www.detroitlions.com/news/detroit-lions-training-camp-day-9-observations-gibbs-whiteside-bartch"
+        },
+        {
+          "claim": "Petzing said he expects Gibbs to be ready despite missed camp reps in a new offensive system; Pacheco received increased work while Gibbs was absent and drew praise from the coordinator.",
+          "published_at": "2026-08-06",
+          "reliability": 0.87,
           "source": "ClickOnDetroit",
           "title": "Detroit Lions OC Drew Petzing says Jahmyr Gibbs will be ready, praises Isiah Pacheco at training camp",
           "url": "https://www.clickondetroit.com/sports/2026/08/06/detroit-lions-oc-drew-petzing-says-jahmyr-gibbs-will-be-ready-praises-isiah-pacheco-at-training-camp/"
         }
       ],
       "injury_change": -0.06,
-      "model": "gpt-5.6-terra",
+      "model": "gpt-5.6-luna",
       "player_name": "Jahmyr Gibbs",
-      "raw_response_id": "resp_0c8a9e3bfb782cf0006a8872d4c92c87d2a499f54bdbbcf4bb",
+      "raw_response_id": "resp_01313ace28a66b9a006a889e0b3e1087d2831003ddd7ab7d13",
       "related_players": [
         {
-          "confidence": 0.83,
-          "delta": -3.0,
+          "confidence": 0.9,
+          "delta": 3.5,
           "player_name": "Isiah Pacheco",
-          "reason": "Montgomery's departure creates available work, but Detroit's stated bell-cow plan for Gibbs and Gibbs' resolved contract situation limit Pacheco primarily to complementary and contingency value.",
+          "reason": "Pacheco should have a defined reserve role behind Gibbs and handled increased camp work during Gibbs' hold-in, giving him meaningful contingency value if Gibbs misses time.",
           "relationship": "direct_backup"
         },
         {
-          "confidence": 0.76,
-          "delta": -2.0,
+          "confidence": 0.75,
+          "delta": 1.5,
           "player_name": "Sione Vaki",
-          "reason": "With Gibbs entrenched as lead back and Pacheco positioned ahead of him on the established backfield depth, Vaki's offensive touch path is narrow outside of injuries.",
-          "relationship": "same_backfield"
-        },
-        {
-          "confidence": 0.69,
-          "delta": 1.0,
-          "player_name": "Jared Goff",
-          "reason": "Gibbs' return from the hold-in and expected full availability preserve a major receiving and explosive-play option in Detroit's offense.",
-          "relationship": "quarterback"
+          "reason": "Vaki is competing for reserve and special-teams work behind Gibbs and Pacheco; Gibbs' bell-cow role limits his routine offensive ceiling, but he remains a possible injury-contingency beneficiary.",
+          "relationship": "direct_backup"
         }
       ],
-      "researched_at": "2026-08-21T15:46:53.122462+00:00",
+      "researched_at": "2026-08-21T18:51:15.925362+00:00",
       "role_change": 0.38,
-      "summary": "Gibbs' brief camp hold-in and minor back issue appear resolved: Detroit signed him through 2030 on August 7 and he returned to practice, making impact plays in team work. The larger 2026 context is favorable after David Montgomery's offseason departure; the Lions have identified Gibbs as the bell-cow, with Isiah Pacheco the clear complementary/backup back. New OC Drew Petzing introduces modest scheme uncertainty, but there is no current indication Gibbs will be unavailable for Week 1."
+      "summary": "Gibbs' early-camp hold-in and minor back issue were resolved: Detroit signed him to a three-year extension on August 6-7, 2026, and he returned to team practice by August 9, immediately making impact plays as a runner and receiver. David Montgomery's departure and Dan Campbell's stated plan to make Gibbs the Lions' bell-cow back materially improve his expected workload, while Isiah Pacheco remains the primary reserve. No current evidence suggests a meaningful ongoing injury limitation or contract-related availability risk. [route: luna (deep=0.32); meaningful teammate propagation; top-10 current board candidate]"
     },
     "4430807": {
-      "availability_risk": 0.04,
+      "availability_risk": 0.06,
       "category": "role",
-      "confidence": 0.86,
-      "direct_delta": 2.0,
-      "distraction_risk": 0.01,
+      "confidence": 0.88,
+      "direct_delta": 1.5,
+      "distraction_risk": 0.02,
       "espn_id": 4430807,
       "evidence": [
         {
-          "claim": "Atlanta announced Robinson\u2019s three-year extension, keeping him with the team through 2030 and resolving the contract situation that had kept him out of early camp practices.",
+          "claim": "Atlanta agreed to a three-year extension keeping Robinson under contract through the 2030 season, eliminating the immediate contract-related absence risk.",
           "published_at": "2026-08-04",
-          "reliability": 0.98,
+          "reliability": 0.99,
           "source": "Atlanta Falcons",
           "title": "Bijan Robinson signs contract extension",
           "url": "https://www.atlantafalcons.com/news/bijan-robinson-contract-extension"
         },
         {
-          "claim": "Stefanski said Robinson\u2019s return would be ramped up after he had been a non-participant through the first week of camp; the report characterized the absence in the context of his contract resolution, not an injury.",
-          "published_at": "2026-08-04",
-          "reliability": 0.97,
-          "source": "Atlanta Falcons",
-          "title": "Falcons Camp Report: Bijan Robinson strikes a deal, Kevin Stefanski details his ramp up",
-          "url": "https://www.atlantafalcons.com/news/falcons-training-camp-report-bijan-robinson-strikes-a-deal-kevin-stefanski-details-his-ramp-up"
-        },
-        {
-          "claim": "Robinson took full-team reps for the first time following his brief acclimation period and caught a wheel-route touchdown in 11-on-11 work.",
+          "claim": "Robinson returned to full-team periods after a brief acclimation period and produced a long wheel-route touchdown in practice with Tua Tagovailoa.",
           "published_at": "2026-08-07",
           "reliability": 0.97,
           "source": "Atlanta Falcons",
@@ -629,127 +906,319 @@
           "url": "https://www.atlantafalcons.com/news/falcons-training-camp-report-bijan-robinson-harold-perkins-jalon-walker"
         },
         {
-          "claim": "Robinson received the first four touches of Atlanta\u2019s opening 11-on-11 drive in joint practices, indicating he is active and remains a central offensive focal point.",
+          "claim": "The first four touches of Atlanta's opening 11-on-11 drive went to Robinson; he showed sharp cuts and made a one-handed catch on a bubble route. The report also said the starting offensive line created early run lanes for him.",
           "published_at": "2026-08-19",
           "reliability": 0.97,
           "source": "Atlanta Falcons",
-          "title": "Falcons Camp Report: How Atlanta\u2019s offense looked against the Colts on Day 1 of joint practices",
+          "title": "Falcons Camp Report: How Atlanta's offense looked against the Colts on Day 1 of joint practices",
           "url": "https://www.atlantafalcons.com/news/falcons-camp-report-atlanta-indianapolis-colts-joint-practices-bijan-tua"
         },
         {
-          "claim": "The Falcons identified Brian Robinson Jr. as the complementary physical back after Tyler Allgeier departed, while describing Bijan Robinson as the backfield\u2019s superstar.",
-          "published_at": "2026-07-13",
-          "reliability": 0.96,
+          "claim": "Starting right tackle Jawaan Taylor was cleared to practice after beginning camp on the active/PUP list, improving the likelihood that Atlanta enters the season with its intended right-side line configuration.",
+          "published_at": "2026-08-10",
+          "reliability": 0.98,
           "source": "Atlanta Falcons",
-          "title": "Falcons 2026 training camp preview: Running back storylines, roster and key questions",
-          "url": "https://www.atlantafalcons.com/news/falcons-2026-training-camp-preview-running-backs"
+          "title": "Falcons activate RT Jawaan Taylor off PUP list, sign DE Cameron Sample",
+          "url": "https://www.atlantafalcons.com/news/falcons-right-tackle-jawaan-taylor-cleared-injury-return-practice"
+        },
+        {
+          "claim": "Trey Sermon was placed on injured reserve, reducing competition for backup running-back touches behind Robinson.",
+          "published_at": "2026-08-19",
+          "reliability": 0.99,
+          "source": "Atlanta Falcons",
+          "title": "Falcons place RB Trey Sermon on injured reserve",
+          "url": "https://www.atlantafalcons.com/news/rb-trey-sermon-injured-reserve"
+        },
+        {
+          "claim": "Tagovailoa dealt with a back issue early in camp, while Penix remained limited to individual and 7-on-7 work during ACL rehabilitation; the quarterback uncertainty creates some offensive-environment volatility for Robinson.",
+          "published_at": "2026-07-29",
+          "reliability": 0.96,
+          "source": "NFL.com",
+          "title": "Tua Tagovailoa out of practice, Michael Penix Jr. out of team drills as Falcons shuffle QBs to start camp",
+          "url": "https://www.nfl.com/news-migrated-v2/michael-penix-jr-tua-tagovailoa-injuries-falcons-shuffle-qbs-camp"
         }
       ],
-      "injury_change": 0.04,
-      "model": "gpt-5.6-terra",
+      "injury_change": 0.0,
+      "model": "gpt-5.6-luna",
       "player_name": "Bijan Robinson",
-      "raw_response_id": "resp_035ff21d77eaf54f006a8872ed547887d2accd98076ab5458c",
+      "raw_response_id": "resp_0e5dd28bb872500b006a889e24020887d2904cb61a95609ca6",
       "related_players": [
         {
-          "confidence": 0.82,
-          "delta": -1.0,
+          "confidence": 0.84,
+          "delta": 2.0,
           "player_name": "Brian Robinson Jr.",
-          "reason": "He is the designated complementary back behind a healthy, fully reintegrated Bijan Robinson; Bijan\u2019s established centerpiece usage limits Brian Robinson\u2019s standalone workload ceiling.",
+          "reason": "With Trey Sermon on injured reserve, Brian Robinson Jr. is listed directly behind Bijan on Atlanta's depth chart and should have a clearer path to backup carries if Bijan misses time.",
           "relationship": "direct_backup"
         },
         {
           "confidence": 0.7,
-          "delta": -1.0,
+          "delta": 0.75,
           "player_name": "Tyler Goodson",
-          "reason": "Goodson has drawn positive camp notices, but Robinson\u2019s resumed full participation and feature-back usage reduce the likelihood of meaningful offensive volume outside the primary backup role.",
+          "reason": "Goodson remains behind the two Robinsons but has reportedly stood out in camp; Sermon's injury increases the probability that Goodson retains a meaningful reserve role.",
           "relationship": "same_backfield"
         }
       ],
-      "researched_at": "2026-08-21T15:47:22.898623+00:00",
-      "role_change": 0.15,
-      "summary": "Robinson\u2019s brief early-camp absence was contract-related rather than injury-related; he signed a three-year extension through 2030, returned to full-team work, and was featured immediately in August 19 joint practices. Tyler Allgeier\u2019s departure leaves Brian Robinson Jr. as the stated complementary back, preserving Bijan\u2019s clear lead role in Kevin Stefanski\u2019s new offense."
+      "researched_at": "2026-08-21T18:51:57.925098+00:00",
+      "role_change": 0.08,
+      "summary": "Bijan Robinson has no reported current injury and is established as Atlanta's clear RB1. His brief early-camp hold-in ended with a three-year extension through 2030, and he has since returned to full-team work, including four strong opening touches and a notable receiving play in the August 19 joint practice. Right tackle Jawaan Taylor has returned from the active/PUP list, while Trey Sermon was placed on injured reserve. The main offset is Atlanta's unsettled quarterback situation: Michael Penix Jr. remains limited while recovering from ACL surgery, and Tua Tagovailoa has not clearly secured the Week 1 job. [route: luna (deep=0.24); top-10 current board candidate]"
     },
     "4430878": {
       "availability_risk": 0.03,
       "category": "role",
-      "confidence": 0.91,
-      "direct_delta": 0.0,
+      "confidence": 0.88,
+      "direct_delta": 0.5,
       "distraction_risk": 0.01,
       "espn_id": 4430878,
       "evidence": [
         {
-          "claim": "Seattle's official depth chart lists Jaxon Smith-Njigba as the standalone first-team receiver, with Cooper Kupp and Rashid Shaheed occupying the other starting WR slots.",
-          "published_at": "2026-08-14",
-          "reliability": 0.98,
+          "claim": "Smith-Njigba had his most productive practice of camp and made an impressive sideline catch during a full-pads session.",
+          "published_at": "2026-08-05",
+          "reliability": 0.9,
           "source": "Seattle Seahawks",
-          "title": "Seahawks Depth Chart",
-          "url": "https://www.seahawks.com/team/depth-chart"
+          "title": "A Spectacular Day For JSN & Other Observations From Day 10 Of Seahawks Training Camp",
+          "url": "https://www.seahawks.com/news/a-spectacular-day-for-jsn-other-observations-from-day-10-of-seahawks-training-camp"
         },
         {
-          "claim": "Brian Fleury is Seattle's new offensive coordinator after Klint Kubiak's departure; the team describes Fleury as bringing schematic familiarity, and Smith-Njigba said Fleury understands the strengths of the players.",
+          "claim": "Seattle's new offense retains Shanahan-style continuity, and the team continues to identify Smith-Njigba as its central offensive playmaker despite the coordinator change.",
           "published_at": "2026-07-30",
-          "reliability": 0.94,
+          "reliability": 0.88,
           "source": "Seattle Seahawks",
           "title": "Offensive Coordinator Brian Fleury Brings Familiarity, Fresh Ideas To Seahawks Offense",
           "url": "https://www.seahawks.com/news/offensive-coordinator-brian-fleury-brings-familiarity-fresh-ideas-to-seahawks-offense"
         },
         {
-          "claim": "Fleury said his goal is to maintain as much of the prior offense as possible and that it should resemble Seattle's 2025 Super Bowl-winning system.",
-          "published_at": "2026-02-19",
-          "reliability": 0.95,
+          "claim": "Shaheed is expected to receive a larger offensive role after completing his first full offseason and training camp with Seattle, creating some additional target competition for Smith-Njigba.",
+          "published_at": "2026-07-28",
+          "reliability": 0.9,
           "source": "Seattle Seahawks",
-          "title": "Seahawks Offensive Coordinator Brian Fleury Not Looking For Huge Changes But To 'Maintain' What Made Seattle's Offense Successful",
-          "url": "https://www.seahawks.com/news/seahawks-offensive-coordinator-brian-fleury-not-looking-for-huge-changes-but-to-maintain-what-made-seattle-s-offense-successful"
+          "title": "WR Rashid Shaheed Ready For A Bigger Role In First Full Season With Seahawks",
+          "url": "https://www.seahawks.com/news/wr-rashid-shaheed-ready-for-a-bigger-role-in-first-full-season-with-seahawks"
         },
         {
-          "claim": "Smith-Njigba was an active participant on the opening day of camp and made a leaping sideline catch from Sam Darnold; the report characterized him as having reached superstar status.",
-          "published_at": "2026-07-25",
-          "reliability": 0.93,
+          "claim": "Horton was cleared after recovering from a surgically repaired shin fracture and is back competing in camp after scoring six touchdowns in eight games as a rookie.",
+          "published_at": "2026-07-31",
+          "reliability": 0.9,
           "source": "Seattle Seahawks",
-          "title": "5 Observations From Day 1 Of 2026 Seahawks Training Camp",
-          "url": "https://www.seahawks.com/news/5-observations-from-day-1-of-2026-seahawks-training-camp"
+          "title": "Tory Horton Is Back And Ready To Build On A Flashing Rookie Season",
+          "url": "https://www.seahawks.com/news/tory-horton-is-back-and-ready-to-build-on-a-flashing-rookie-season"
         },
         {
-          "claim": "Seattle signed Smith-Njigba to a multi-year extension, removing a potential 2026 contract-dispute or holdout issue.",
+          "claim": "Seattle signed Smith-Njigba to a multi-year extension, eliminating current holdout or contract-dispute concerns.",
           "published_at": "2026-03-25",
-          "reliability": 0.98,
+          "reliability": 0.95,
           "source": "Seattle Seahawks",
           "title": "Seahawks Sign Jaxon Smith-Njigba To Multi-Year Extension",
           "url": "https://www.seahawks.com/news/seahawks-sign-jaxon-smith-njigba-to-multi-year-extension"
         }
       ],
       "injury_change": 0.0,
-      "model": "gpt-5.6-terra",
+      "model": "gpt-5.6-luna",
       "player_name": "Jaxon Smith-Njigba",
-      "raw_response_id": "resp_0522ff1ed13f0d61006a8873ec204087d2aae2045fec8b1985",
+      "raw_response_id": "resp_0a13d72f87c259cc006a889f60505087d2a69d0ec2067f2a10",
       "related_players": [
         {
-          "confidence": 0.72,
-          "delta": -1.0,
-          "player_name": "Cooper Kupp",
-          "reason": "JSN's confirmed WR1 status limits Kupp's likelihood of overtaking him as Seattle's primary target earner, though Kupp remains a starting receiver.",
-          "relationship": "target_competitor"
-        },
-        {
-          "confidence": 0.7,
-          "delta": -1.0,
+          "confidence": 0.86,
+          "delta": 2.0,
           "player_name": "Rashid Shaheed",
-          "reason": "Shaheed is a starting complementary receiver, but JSN's entrenched lead role caps Shaheed's path to a true target-leading workload.",
+          "reason": "Seattle expects Shaheed to have a bigger role in his first full season with the team, increasing his route and deep-target opportunities.",
           "relationship": "target_competitor"
         },
         {
-          "confidence": 0.7,
+          "confidence": 0.78,
           "delta": 1.0,
-          "player_name": "Sam Darnold",
-          "reason": "Continuity between Darnold and Seattle's established WR1, plus a coordinator intending to preserve the prior offensive structure, modestly supports Darnold's passing-game stability.",
+          "player_name": "Tory Horton",
+          "reason": "Horton has returned from his surgically repaired shin fracture and is competing for a meaningful role after scoring six touchdowns in eight games as a rookie.",
+          "relationship": "target_competitor"
+        },
+        {
+          "confidence": 0.72,
+          "delta": 0.5,
+          "player_name": "Cooper Kupp",
+          "reason": "Kupp remains a prominent veteran option in Seattle's passing game and led the team in receiving in two of three postseason games, preserving some competition for high-value targets.",
+          "relationship": "target_competitor"
+        }
+      ],
+      "researched_at": "2026-08-21T18:56:59.636446+00:00",
+      "role_change": 0.04,
+      "summary": "Jaxon Smith-Njigba is healthy, practicing fully, and remains Seattle's clear WR1 entering 2026. Training-camp reports describe strong performance and continued quarterback chemistry, while the new Brian Fleury offense is intended as a continuity-based variation of last year's system. The main offset is increased target competition: Rashid Shaheed is expected to have a larger role after a full offseason, and Cooper Kupp and recovered second-year WR Tory Horton remain established passing-game options. His March 25, 2026 extension removes contract or holdout risk. [route: luna (deep=0.21); top-10 current board candidate]"
+    },
+    "4567048": {
+      "availability_risk": 0.13,
+      "category": "role",
+      "confidence": 0.9,
+      "direct_delta": 4.5,
+      "distraction_risk": 0.02,
+      "espn_id": 4567048,
+      "evidence": [
+        {
+          "claim": "The official unofficial depth chart lists Kenneth Walker first at RB, followed by Emari Demercado, Emmett Johnson and Brashard Smith.",
+          "published_at": "2026-08-21",
+          "reliability": 0.98,
+          "source": "Kansas City Chiefs",
+          "title": "Kansas City Chiefs Unofficial Depth Chart",
+          "url": "https://www.chiefs.com/team/depth-chart"
+        },
+        {
+          "claim": "The team reported that Walker continued to impress as both a runner and pass catcher, including a wheel-route touchdown from Patrick Mahomes during 11-on-11 work.",
+          "published_at": "2026-08-10",
+          "reliability": 0.94,
+          "source": "Kansas City Chiefs",
+          "title": "Five Observations from Monday\u2019s Practice | Chiefs Training Camp 8/10",
+          "url": "https://www.chiefs.com/news/five-observations-from-monday-s-practice-chiefs-training-camp-8-10"
+        },
+        {
+          "claim": "Walker said he expected greater use in Kansas City\u2019s passing game after offseason work building chemistry with Mahomes.",
+          "published_at": "2026-05-05",
+          "reliability": 0.88,
+          "source": "NFL.com",
+          "title": "RB Kenneth Walker expects to be used more in passing game with Chiefs",
+          "url": "https://www.nfl.com/news/rb-kenneth-walker-expects-to-be-used-more-in-passing-game-with-chiefs"
+        },
+        {
+          "claim": "Kansas City signed Walker to a three-year contract worth up to $45 million with $28.7 million guaranteed after specifically seeking to improve a bottom-tier 2025 rushing offense.",
+          "published_at": "2026-03-09",
+          "reliability": 0.95,
+          "source": "NFL.com",
+          "title": "Chiefs signing ex-Seahawks RB Kenneth Walker III, MVP of Super Bowl LX, to three-year deal",
+          "url": "https://www.nfl.com/news/chiefs-signing-ex-seahawks-rb-kenneth-walker-iii-mvp-of-super-bowl-lx"
+        },
+        {
+          "claim": "Mahomes was fully cleared for training camp following his 2025 ACL injury, and subsequent August 17-18 team reports showed him taking first-team work and moving effectively in practice.",
+          "published_at": "2026-07-24",
+          "reliability": 0.93,
+          "source": "NFL.com",
+          "title": "Chiefs QB Patrick Mahomes (knee) fully cleared to participate in training camp",
+          "url": "https://www.nfl.com/_amp/chiefs-qb-patrick-mahomes-knee-fully-cleared-to-participate-in-training-camp"
+        },
+        {
+          "claim": "Starting LT Josh Simmons remained out with a back issue and starting RG Trey Smith remained out with a hip issue at the final camp practice, leaving a current line-continuity concern for the rushing environment.",
+          "published_at": "2026-08-20",
+          "reliability": 0.94,
+          "source": "Kansas City Chiefs",
+          "title": "Five Observations from Thursday\u2019s Practice | Chiefs Training Camp 8/20",
+          "url": "https://www.chiefs.com/news/five-observations-from-thursday-s-practice-chiefs-training-camp-8-20"
+        }
+      ],
+      "injury_change": 0.02,
+      "model": "gpt-5.6-terra",
+      "player_name": "Kenneth Walker III",
+      "raw_response_id": "resp_09e7f8a81f0fbb4d006a889fd948b887d2b6372e2ec195d289",
+      "related_players": [
+        {
+          "confidence": 0.9,
+          "delta": -3.5,
+          "player_name": "Emari Demercado",
+          "reason": "Demercado is officially listed directly behind Walker, but Walker\u2019s entrenched RB1 status and positive receiving reports reduce the likelihood that Demercado opens the season with an independent fantasy-relevant workload.",
+          "relationship": "direct_backup"
+        },
+        {
+          "confidence": 0.78,
+          "delta": -2.0,
+          "player_name": "Emmett Johnson",
+          "reason": "Johnson showed well in the preseason opener, but he remains third on the official depth chart behind Walker and Demercado; a Walker-centered backfield narrows his path to immediate offensive volume.",
+          "relationship": "same_backfield"
+        },
+        {
+          "confidence": 0.76,
+          "delta": -1.5,
+          "player_name": "Brashard Smith",
+          "reason": "Smith is fourth on the official RB depth chart and also has return duties, so Walker\u2019s firm lead role limits Smith\u2019s early-down and passing-down pathway absent injuries ahead of him.",
+          "relationship": "same_backfield"
+        },
+        {
+          "confidence": 0.74,
+          "delta": 1.0,
+          "player_name": "Patrick Mahomes",
+          "reason": "Walker\u2019s ability to add efficient rushing and screen-game production modestly improves offensive balance, while Mahomes\u2019 full clearance and strong camp movement stabilize the quality of Walker\u2019s scoring environment.",
           "relationship": "quarterback"
         }
       ],
-      "researched_at": "2026-08-21T15:51:41.270668+00:00",
-      "role_change": 0.05,
-      "summary": "Smith-Njigba has participated through camp and remains Seattle's clear WR1 on the official depth chart, with no current injury, holdout, suspension, or off-field availability concern identified. Seattle changed coordinators from Klint Kubiak to first-time play-caller Brian Fleury, but Fleury has explicitly emphasized continuity with the successful 2025 scheme; this is a minor implementation variable rather than a material role downgrade. The surrounding WR depth (Cooper Kupp, Rashid Shaheed, Tory Horton) creates some weekly target competition but does not presently displace JSN's primary role."
+      "researched_at": "2026-08-21T18:59:15.341580+00:00",
+      "role_change": 0.42,
+      "summary": "Walker is the Chiefs\u2019 clear RB1 on the current official depth chart, ahead of Emari Demercado, rookie Emmett Johnson and Brashard Smith. His contract and sustained camp receiving work support a larger passing-game ceiling than his Seattle baseline, while Mahomes has been fully cleared and is practicing well. The recent caution is team-level: projected starting LT Josh Simmons and RG Trey Smith both remained out on August 20, creating short-term offensive-line uncertainty; Walker himself has no reported camp limitation. This supports a meaningful but more bounded upgrade than a +7 role swing because the starting role and Kansas City move are already substantially reflected in his existing draft baseline. [route: terra (deep=0.37); large context swing (+7.0); material role change (+0.62); meaningful teammate propagation]"
+    },
+    "4890973": {
+      "availability_risk": 0.03,
+      "category": "role",
+      "confidence": 0.86,
+      "direct_delta": -1.5,
+      "distraction_risk": 0.01,
+      "espn_id": 4890973,
+      "evidence": [
+        {
+          "claim": "Jeanty is listed first at running back, ahead of Mike Washington Jr., Dylan Laube, Roman Hemby and Dare Ogunbowale.",
+          "published_at": "2026-08-17",
+          "reliability": 0.98,
+          "source": "Las Vegas Raiders",
+          "title": "Raiders' unofficial depth chart for second preseason game vs. Houston Texans",
+          "url": "https://www.raiders.com/news/raiders-unofficial-depth-chart-second-preseason-game-vs-houston-texans-nfl-082026"
+        },
+        {
+          "claim": "Training-camp reporting identified Jeanty as the lead back, with Washington and Laube working behind him; Jeanty was also highlighted for explosive practice activity.",
+          "published_at": "2026-08-11",
+          "reliability": 0.96,
+          "source": "Las Vegas Raiders",
+          "title": "Raiders 2026 Training Camp Updates",
+          "url": "https://www.raiders.com/news/raiders-2026-training-camp-updates-nfl-preseason-transactions-news-highlights"
+        },
+        {
+          "claim": "The Raiders characterized Jeanty as the expected lead back but said Washington has a strong opportunity to earn substantial carries in the wide-zone scheme.",
+          "published_at": "2026-07-02",
+          "reliability": 0.97,
+          "source": "Las Vegas Raiders",
+          "title": "2026 Position Breakdown: Versatility prioritized in running backs room to aid Ashton Jeanty",
+          "url": "https://www.raiders.com/news/2026-position-breakdown-raiders-running-backs-ashton-jeanty-mike-washington-jr-connor-heyward"
+        },
+        {
+          "claim": "Washington produced 63 yards on six carries against Arizona and 56 yards on nine carries against Houston, including explosive runs, increasing the likelihood that he receives meaningful weekly touches.",
+          "published_at": "2026-08-21",
+          "reliability": 0.62,
+          "source": "TWSN",
+          "title": "Mike Washington Jr. Is Forcing the Las Vegas Raiders To Reduce Ashton Jeanty\u2019s Workload",
+          "url": "https://twsn.net/2026/08/21/mike-washington-jr-is-forcing-the-las-vegas-raiders-to-reduce-ashton-jeantys-workload"
+        },
+        {
+          "claim": "NFL.com noted that Washington broke a 33-yard run against Houston while Jeanty led the backfield, supporting a productive but potentially shared rushing arrangement.",
+          "published_at": "2026-08-21",
+          "reliability": 0.94,
+          "source": "NFL.com",
+          "title": "2026 NFL Preseason, Week 2: What We Learned from Thursday\u2019s games",
+          "url": "https://www.nfl.com/news/2026-nfl-preseason-week-2-what-we-learned-thursday-games"
+        },
+        {
+          "claim": "Jeanty opened the preseason game as the first Raiders running back and handled all of his touches on the opening drive before exiting; he had three carries for 16 yards and one target.",
+          "published_at": "2026-08-13",
+          "reliability": 0.9,
+          "source": "CBS Sports",
+          "title": "Raiders' Ashton Jeanty: Solid in preseason cameo",
+          "url": "https://www.cbssports.com/fantasy/football/news/raiders-ashton-jeanty-solid-in-preseason-cameo/"
+        }
+      ],
+      "injury_change": 0.0,
+      "model": "gpt-5.6-luna",
+      "player_name": "Ashton Jeanty",
+      "raw_response_id": "resp_079e0cb3e2e223be006a88a042544487d29fe39d1f6114f04d",
+      "related_players": [
+        {
+          "confidence": 0.84,
+          "delta": 4.0,
+          "player_name": "Mike Washington Jr.",
+          "reason": "Washington is the clear No. 2 on the official depth chart and has delivered explosive production in both preseason games, making him increasingly likely to receive a meaningful complementary workload behind Jeanty.",
+          "relationship": "direct_backup"
+        },
+        {
+          "confidence": 0.48,
+          "delta": 0.8,
+          "player_name": "Dylan Laube",
+          "reason": "Laube remains third on the depth chart but has received offensive and return-work opportunities, including a touchdown in the Houston preseason game; his path to fantasy relevance improves if the Raiders maintain a broader rotation.",
+          "relationship": "direct_backup"
+        }
+      ],
+      "researched_at": "2026-08-21T19:00:55.557994+00:00",
+      "role_change": -0.2,
+      "summary": "Jeanty remains the Raiders' clear-cut RB1 and has led first-team work throughout camp, with coaches and NFL observers projecting a major role in Klint Kubiak's offense. However, fourth-round rookie Mike Washington Jr. has produced explosive runs in both preseason games, reinforcing Kubiak's stated preference for a two-back rotation and creating a modest workload/ceiling risk for Jeanty. No current injury or availability concern is reported. [route: luna (deep=0.31); ADP near upcoming selection]"
     }
   },
-  "updated_at": "2026-08-21T15:52:21.119791+00:00",
+  "updated_at": "2026-08-21T19:01:24.474365+00:00",
   "version": 1
 }

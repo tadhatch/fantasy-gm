@@ -1,0 +1,28 @@
+# Runner integration
+
+Add imports:
+
+from fantasy_gm.defense.stats import load_defense_stats
+from fantasy_gm.defense.builder import build_defense_board_players
+
+In DraftRunner.prepare(), AFTER the normal offensive board is built:
+
+    defense_stats = load_defense_stats(
+        base_season=self.client.settings.espn_season - 1,
+        schedule_season=self.client.settings.espn_season,
+        early_weeks=4,
+    )
+
+    defenses = build_defense_board_players(
+        defense_stats,
+    )
+
+    self.board.extend(defenses)
+
+    self.console.print(
+        f"[green]D/ST ready:[/green] "
+        f"{len(defenses)} units evaluated."
+    )
+
+Because strategy.rank() sorts everything by LIVE score, do NOT append-sort the full
+board afterward. Offensive players and D/ST should enter the live strategy together.

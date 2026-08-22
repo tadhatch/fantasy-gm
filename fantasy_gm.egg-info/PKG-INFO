@@ -13,4 +13,5 @@ Requires-Dist: rich>=13.7
 Requires-Dist: nflreadpy>=0.1
 Requires-Dist: polars>=1.0
 Requires-Dist: openai>=1.0
+Requires-Dist: websocket-client>=1.8
 Dynamic: license-file

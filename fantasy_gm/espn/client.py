@@ -17,8 +17,18 @@ class ESPNAuthError(ESPNError):
 
 
 class ESPNClient:
-    def __init__(self, settings: Settings):
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        league_id: int | None = None,
+    ):
         self.settings = settings
+        self.league_id = (
+            league_id
+            if league_id is not None
+            else settings.espn_league_id
+        )
         self.session = requests.Session()
         self.session.cookies.update({
             "SWID": settings.espn_swid,
@@ -31,10 +41,10 @@ class ESPNClient:
 
     @property
     def league_url(self) -> str:
-        s = self.settings
         return (
             "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
-            f"seasons/{s.espn_season}/segments/0/leagues/{s.espn_league_id}"
+            f"seasons/{self.settings.espn_season}/segments/0/leagues/"
+            f"{self.league_id}"
         )
 
     def _get(self, url: str, *, params=None, headers=None) -> Any:
@@ -85,3 +95,33 @@ class ESPNClient:
             ],
             headers=headers,
         )
+
+
+    def get_draft_security(
+        self,
+        *,
+        team_id: int | None = None,
+        league_id: int | None = None,
+    ) -> str:
+        target_league = league_id or self.league_id
+        target_team = team_id or self.settings.espn_team_id
+
+        url = (
+            "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
+            f"seasons/{self.settings.espn_season}/segments/0/"
+            f"leagues/{target_league}/teams/{target_team}/draftSecurity"
+        )
+
+        response = self.session.get(url, timeout=20)
+
+        if response.status_code in (401, 403):
+            raise ESPNAuthError(
+                f"ESPN draftSecurity authentication failed "
+                f"({response.status_code})"
+            )
+
+        response.raise_for_status()
+
+        # In the captured ESPN browser flow this endpoint returns a plain numeric
+        # token, not a JSON object.
+        return response.text.strip()
