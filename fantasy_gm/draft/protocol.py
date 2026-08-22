@@ -71,6 +71,14 @@ class Init(DraftEvent):
     payload: str
 
 
+@dataclass(slots=True)
+class Chat(DraftEvent):
+    team_id: int
+    member_id: str
+    timestamp_ms: int
+    text: str
+
+
 def parse_message(message: str) -> DraftEvent:
     raw = message.strip()
     if not raw:
@@ -125,6 +133,17 @@ def parse_message(message: str) -> DraftEvent:
                 player_id=int(parts[2]),
                 selection_type=int(parts[3]),
                 member_id=parts[4] if len(parts) >= 5 else None,
+            )
+
+        if command == "CHAT" and len(parts) >= 5:
+            chat_parts = raw.split(" ", 4)
+
+            return Chat(
+                raw=message,
+                team_id=int(chat_parts[1]),
+                member_id=chat_parts[2],
+                timestamp_ms=int(chat_parts[3]),
+                text=chat_parts[4],
             )
 
         if command == "PONG":

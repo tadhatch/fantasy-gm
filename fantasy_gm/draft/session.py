@@ -178,6 +178,19 @@ class DraftSession:
 
         self.ws.send(f"SELECT {int(player_id)}\n")
 
+    def send_chat(self, text: str) -> None:
+        if self.ws is None:
+            raise DraftSessionError("Draft session is not connected")
+
+        text = str(text).strip()
+
+        if not text:
+            raise ValueError("Draft chat message cannot be empty")
+
+        # Draft WebSocket protocol observed in the live ESPN room:
+        #   client -> CHAT <message>
+        self.ws.send(f"CHAT {text}\n")
+
     def select_and_wait(
         self,
         player_id: int,
