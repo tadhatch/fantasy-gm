@@ -83,53 +83,82 @@ class DraftRunner:
         )
 
     def prepare(self) -> None:
-        """
-        Build the expensive quantitative/context board BEFORE opening the WebSocket.
-        This keeps our response on the 30/60-second clock fast.
-        """
-        self.console.print("[dim]Preparing draft board before connecting...[/dim]")
-
-        data = self.client.get_player_pool(limit=self.config.board_pool_limit)
+        self.console.print(
+            "[dim]Preparing minimal draft board before connecting...[/dim]"
+        )
+    
+        data = self.client.get_player_pool(
+            limit=self.config.board_pool_limit
+        )
         pool = data.get("players", []) if isinstance(data, dict) else data
-
-        # For the live selection test we deliberately avoid recomputing a mock-specific
-        # Next% target. The existing Value/Pick scores, AI cache, usage, depth, fandom,
-        # etc. still apply. We will add exact roster/next-pick strategy next.
+    
         self.board = build_board(
             pool,
             season=self.client.settings.espn_season,
             next_pick=None,
-            history_season=self.client.settings.espn_season - 1,
+            history_season=None,
             favorite_team=self.favorite_team,
             fandom_weight=self.fandom_weight,
         )
-
-        defense_stats = load_defense_stats(
-            base_season=self.client.settings.espn_season - 1,
-            schedule_season=self.client.settings.espn_season,
-            early_weeks=4,
-        )
-
-        defenses = build_defense_board_players(
-            defense_stats,
-        )
-
-        self.board.extend(defenses)
-
-        self.console.print(
-            f"[green]D/ST ready:[/green] "
-            f"{len(defenses)} units evaluated."
-        )
-
+    
         self.player_names = {
             row.espn_id: row.name
             for row in self.board
         }
-
+    
         self.console.print(
             f"[green]Board ready:[/green] "
             f"{len(self.board)} draftable assets."
         )
+
+#    def prepare(self) -> None:
+#        """
+#        Build the expensive quantitative/context board BEFORE opening the WebSocket.
+#        This keeps our response on the 30/60-second clock fast.
+#        """
+#        self.console.print("[dim]Preparing draft board before connecting...[/dim]")
+#
+#        data = self.client.get_player_pool(limit=self.config.board_pool_limit)
+#        pool = data.get("players", []) if isinstance(data, dict) else data
+#
+#        # For the live selection test we deliberately avoid recomputing a mock-specific
+#        # Next% target. The existing Value/Pick scores, AI cache, usage, depth, fandom,
+#        # etc. still apply. We will add exact roster/next-pick strategy next.
+#        self.board = build_board(
+#            pool,
+#            season=self.client.settings.espn_season,
+#            next_pick=None,
+#            history_season=self.client.settings.espn_season - 1,
+#            favorite_team=self.favorite_team,
+#            fandom_weight=self.fandom_weight,
+#        )
+#
+#        defense_stats = load_defense_stats(
+#            base_season=self.client.settings.espn_season - 1,
+#            schedule_season=self.client.settings.espn_season,
+#            early_weeks=4,
+#        )
+#
+#        defenses = build_defense_board_players(
+#            defense_stats,
+#        )
+#
+#        self.board.extend(defenses)
+#
+#        self.console.print(
+#            f"[green]D/ST ready:[/green] "
+#            f"{len(defenses)} units evaluated."
+#        )
+#
+#        self.player_names = {
+#            row.espn_id: row.name
+#            for row in self.board
+#        }
+#
+#        self.console.print(
+#            f"[green]Board ready:[/green] "
+#            f"{len(self.board)} draftable assets."
+#        )
 
     def best_available(self):
         our_roster = self.team_rosters.get(self.team_id, [])
