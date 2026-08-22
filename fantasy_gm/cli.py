@@ -12,6 +12,7 @@ from fantasy_gm.config import get_settings
 from fantasy_gm.draft.watcher import watch_draft
 from fantasy_gm.draft.watcher_live import watch_live_draft
 from fantasy_gm.draft.runner import DraftRunner, DraftRunnerConfig
+from fantasy_gm.draft.session import DraftSession
 from fantasy_gm.espn.client import ESPNClient
 from fantasy_gm.espn.constants import POSITION_IDS
 from fantasy_gm.espn.draft import load_draft_picks
@@ -21,12 +22,20 @@ from fantasy_gm.board.builder import build_board
 from fantasy_gm.board.renderer import render_board
 from fantasy_gm.context.renderer import render_context
 from fantasy_gm.context.service import refresh_context
+from fantasy_gm.supervisor import run_supervisor
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 context_app = typer.Typer(help="AI current-context research")
 app.add_typer(context_app, name="context")
 
+@app.command()
+def run():
+    """Run the always-on Fantasy GM supervisor."""
+
+    settings = get_settings()
+    client = ESPNClient(settings)
+    run_supervisor(client)
 
 @app.command()
 def league() -> None:
@@ -285,8 +294,6 @@ def draft_watch(
         console.print("\n[yellow]Draft watcher stopped.[/yellow]")
 
 
-from fantasy_gm.draft.session import DraftSession
-
 @draft_app.command("select")
 def draft_select(
     player_id: int = typer.Argument(...),
@@ -309,6 +316,7 @@ def draft_select(
             f"[green]ESPN acknowledged player {selected.player_id} "
             f"for team {selected.team_id}.[/green]"
         )
+
 
 @draft_app.command("run")
 def draft_run(

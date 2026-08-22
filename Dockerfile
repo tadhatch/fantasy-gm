@@ -21,4 +21,4 @@ RUN pip install --upgrade pip \
 ENTRYPOINT ["fantasy-gm"]
 
 # `docker compose run fantasy-gm` with no args will show help.
-CMD ["--help"]
+CMD ["run"]
