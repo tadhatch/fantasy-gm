@@ -5,6 +5,7 @@ import random
 import threading
 import time
 from dataclasses import dataclass
+from urllib.parse import quote_plus
 
 import websocket
 
@@ -187,9 +188,9 @@ class DraftSession:
         if not text:
             raise ValueError("Draft chat message cannot be empty")
 
-        # Draft WebSocket protocol observed in the live ESPN room:
-        #   client -> CHAT <message>
-        self.ws.send(f"CHAT {text}\n")
+        encoded = quote_plus(text)
+
+        self.ws.send(f"CHAT {encoded}\n")
 
     def select_and_wait(
         self,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import unquote_plus
 
 
 @dataclass(slots=True)
@@ -143,7 +144,7 @@ def parse_message(message: str) -> DraftEvent:
                 team_id=int(chat_parts[1]),
                 member_id=chat_parts[2],
                 timestamp_ms=int(chat_parts[3]),
-                text=chat_parts[4],
+                text=unquote_plus(chat_parts[4]).strip(),
             )
 
         if command == "PONG":
