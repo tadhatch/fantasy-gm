@@ -22,12 +22,15 @@ from fantasy_gm.board.builder import build_board
 from fantasy_gm.board.renderer import render_board
 from fantasy_gm.context.renderer import render_context
 from fantasy_gm.context.service import refresh_context
+from fantasy_gm.chatbot.cli_commands import build_chatbot_typer
 from fantasy_gm.supervisor import run_supervisor
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 context_app = typer.Typer(help="AI current-context research")
 app.add_typer(context_app, name="context")
+chatbot_app = build_chatbot_typer()
+app.add_typer(chatbot_app, name="chatbot")
 
 @app.command()
 def run():

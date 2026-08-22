@@ -4,6 +4,7 @@ pyproject.toml
 fantasy_gm/__init__.py
 fantasy_gm/cli.py
 fantasy_gm/config.py
+fantasy_gm/supervisor.py
 fantasy_gm.egg-info/PKG-INFO
 fantasy_gm.egg-info/SOURCES.txt
 fantasy_gm.egg-info/dependency_links.txt
@@ -14,6 +15,21 @@ fantasy_gm/board/__init__.py
 fantasy_gm/board/builder.py
 fantasy_gm/board/models.py
 fantasy_gm/board/renderer.py
+fantasy_gm/chatbot/__init__.py
+fantasy_gm/chatbot/cli_commands.py
+fantasy_gm/chatbot/context.py
+fantasy_gm/chatbot/entrypoint.py
+fantasy_gm/chatbot/espn_transport.py
+fantasy_gm/chatbot/llm.py
+fantasy_gm/chatbot/local.py
+fantasy_gm/chatbot/local_transport.py
+fantasy_gm/chatbot/models.py
+fantasy_gm/chatbot/policy.py
+fantasy_gm/chatbot/runtime.py
+fantasy_gm/chatbot/service.py
+fantasy_gm/chatbot/settings.py
+fantasy_gm/chatbot/state.py
+fantasy_gm/chatbot/transport.py
 fantasy_gm/context/__init__.py
 fantasy_gm/context/models.py
 fantasy_gm/context/renderer.py
@@ -34,6 +50,7 @@ fantasy_gm/defense/stats.py
 fantasy_gm/defense/team_ai_prompt.py
 fantasy_gm/draft/board.py
 fantasy_gm/draft/evaluator.py
+fantasy_gm/draft/init.py
 fantasy_gm/draft/protocol.py
 fantasy_gm/draft/replacement.py
 fantasy_gm/draft/runner.py
