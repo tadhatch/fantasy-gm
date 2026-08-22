@@ -355,7 +355,7 @@ def draft_run(
         config=DraftRunnerConfig(
             auto_select=auto_select,
             ack_timeout=3.0,
-            board_pool_limit=450,
+            board_pool_limit=100,
         ),
     )
 
