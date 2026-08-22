@@ -1,0 +1,15 @@
+services:
+  fantasy-gm:
+    build:
+      context: .
+    image: fantasy-gm:local
+
+    env_file:
+      - .env
+
+    volumes:
+      # Useful for logs, captured draft data, HAR files, etc.
+      - ./data:/app/data
+
+    stdin_open: true
+    tty: true

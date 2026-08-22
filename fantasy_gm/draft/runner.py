@@ -12,7 +12,18 @@ from fantasy_gm.espn.constants import defense_name
 from fantasy_gm.defense.stats import load_defense_stats
 from fantasy_gm.defense.builder import build_defense_board_players
 
-from .protocol import AutoDraft, AutoSuggest, Selected, Selecting
+from .init import (
+    InitPick,
+    decode_init_picks,
+)
+
+from .protocol import (
+    AutoDraft,
+    Init,
+    Selected,
+    Selecting,
+)
+
 from .session import (
     DraftSelectionTimeout,
     DraftSessionError,
@@ -54,6 +65,7 @@ class DraftRunner:
         self.fandom_weight = fandom_weight
         self.config = config or DraftRunnerConfig()
 
+        self.last_overall_pick = 0
         self.pending_selection: int | None = None
         self.reconnect_count = 0
 
@@ -121,7 +133,7 @@ class DraftRunner:
 
     def best_available(self):
         our_roster = self.team_rosters.get(self.team_id, [])
-        current_overall = len(self.taken) + 1
+        current_overall = self.last_overall_pick + 1
         next_pick = current_overall + self.strategy.rules.league_size
 
         ranked = self.strategy.rank(
@@ -165,13 +177,7 @@ class DraftRunner:
                             "[green]Connected to ESPN draft WebSocket.[/green]"
                         )
 
-                    discovered = self._resync_from_rest()
-
-                    self.console.print(
-                        f"[dim]Reconciliation: "
-                        f"{len(self.taken)} known picks "
-                        f"({discovered} recovered by REST)[/dim]"
-                    )
+                    self._resync_from_rest()
 
                     completed = self._consume_session(session)
 
@@ -221,6 +227,15 @@ class DraftRunner:
         session: DraftSession,
     ) -> bool:
         for event in session.events():
+
+            if isinstance(event, Init):
+                recovered = decode_init_picks(
+                    event.payload,
+                    league_id=self.client.league_id,
+                )
+
+                self._recover_init_picks(recovered)
+                continue
 
             if isinstance(event, AutoDraft):
                 if event.team_id == self.team_id:
@@ -344,18 +359,23 @@ class DraftRunner:
 
         league_size = self.strategy.rules.league_size
 
+        self.last_overall_pick += 1
+        overall_pick = self.last_overall_pick
+
         round_number = (
-            (event.overall_pick - 1) // league_size
+            (overall_pick - 1) // league_size
         ) + 1
 
         pick_in_round = (
-            (event.overall_pick - 1) % league_size
+            (overall_pick - 1) % league_size
         ) + 1
 
         self.console.print(
-            f"R{round_number:>2}.{pick_in_round:02} "
-            f"(#{event.overall_pick:>3}) "
-            f"Team {event.team_id:>2} → ..."
+            f"R{round_number}.{pick_in_round:02} "
+            f"(#{overall_pick:>3}) "
+            f"Team {event.team_id:>2} selected "
+            f"{name} ({event.player_id})"
+            f"{suffix}"
         )
 
     def _handle_our_turn(
@@ -505,3 +525,52 @@ class DraftRunner:
                 )
 
         return discovered
+
+    def _recover_init_picks(
+        self,
+        picks: list[InitPick],
+    ) -> None:
+        discovered = 0
+
+        for pick in picks:
+            self.last_overall_pick = max(
+                self.last_overall_pick,
+                pick.overall_pick,
+            )
+
+            if pick.player_id in self.taken:
+                continue
+
+            self.taken.add(
+                pick.player_id
+            )
+
+            self.team_rosters.setdefault(
+                pick.team_id,
+                [],
+            ).append(
+                pick.player_id
+            )
+
+            name = self.player_names.get(
+                pick.player_id,
+                defense_name(pick.player_id)
+                or f"ESPN player {pick.player_id}",
+            )
+
+            self.console.print(
+                f"[dim]RECOVERED "
+                f"#{pick.overall_pick:>3} "
+                f"Team {pick.team_id:>2} → "
+                f"{name}[/dim]"
+            )
+
+            discovered += 1
+
+        self.console.print(
+            f"[green]INIT reconciliation: "
+            f"{discovered} historical picks recovered, "
+            f"{len(self.taken)} total known, "
+            f"through pick #{self.last_overall_pick}."
+            f"[/green]"
+        )

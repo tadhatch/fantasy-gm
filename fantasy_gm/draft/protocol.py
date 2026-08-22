@@ -66,6 +66,11 @@ class Unknown(DraftEvent):
     command: str
 
 
+@dataclass(slots=True)
+class Init(DraftEvent):
+    payload: str
+
+
 def parse_message(message: str) -> DraftEvent:
     raw = message.strip()
     if not raw:
@@ -126,6 +131,12 @@ def parse_message(message: str) -> DraftEvent:
             return Pong(
                 raw=message,
                 payload=" ".join(parts[1:]) if len(parts) > 1 else "",
+            )
+
+        if command == "INIT":
+            return Init(
+                raw=message,
+                payload=raw.removeprefix("INIT").strip(),
             )
 
     except (ValueError, IndexError):

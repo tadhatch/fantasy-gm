@@ -299,6 +299,10 @@ class DraftSession:
                 return
 
             if isinstance(message, bytes):
+                print(
+                    f"[WS BINARY] len={len(message)} "
+                    f"prefix={message[:120]!r}"
+                )
                 continue
 
             event = parse_message(message)

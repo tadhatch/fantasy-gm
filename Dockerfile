@@ -1,20 +1,24 @@
-FROM python:3.12-slim
+FROM python:3.13-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
+# Copy package metadata first for better layer caching
 COPY pyproject.toml ./
 COPY README.md ./
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .
-
+# Copy source
 COPY fantasy_gm ./fantasy_gm
 
-RUN pip install --no-cache-dir .
+# Install fantasy-gm and its dependencies
+RUN pip install --upgrade pip \
+    && pip install .
 
-EXPOSE 8000
+# Run the CLI by default.
+ENTRYPOINT ["fantasy-gm"]
 
-CMD ["uvicorn", "fantasy_gm.web.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# `docker compose run fantasy-gm` with no args will show help.
+CMD ["--help"]
