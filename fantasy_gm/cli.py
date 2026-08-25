@@ -25,12 +25,17 @@ from fantasy_gm.context.service import refresh_context
 from fantasy_gm.chatbot.cli_commands import build_chatbot_typer
 from fantasy_gm.supervisor import run_supervisor
 
+
+# Build Typers
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 context_app = typer.Typer(help="AI current-context research")
 app.add_typer(context_app, name="context")
 chatbot_app = build_chatbot_typer()
 app.add_typer(chatbot_app, name="chatbot")
+worker_app = typer.Typer(no_args_is_help=True, help="Run one-shot GM workers")
+app.add_typer(worker_app, name="worker")
+
 
 @app.command()
 def run():
@@ -360,3 +365,19 @@ def draft_run(
     )
 
     runner.run()
+
+
+@worker_app.command("test")
+def worker_test(
+    job_id: str = typer.Option(..., "--job-id"),
+    sleep_seconds: int = typer.Option(
+        600,
+        "--sleep",
+    ),
+) -> None:
+    from fantasy_gm.workers.test_worker import run_test_worker
+
+    run_test_worker(
+        job_id=job_id,
+        sleep_seconds=sleep_seconds,
+    )
