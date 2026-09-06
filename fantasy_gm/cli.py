@@ -496,3 +496,90 @@ def worker_evaluate(
     )
 
     console.print(f"[green]Evaluated {len(results)} player(s).[/green]")
+
+
+@worker_app.command("waiver")
+def worker_waiver(
+    team_id: int | None = typer.Option(
+        None,
+        "--team-id",
+        help="Defaults to your configured team",
+    ),
+    pool_size: int = typer.Option(
+        60,
+        "--pool-size",
+        help="Free agents fed to the screening stage after Python pre-filtering",
+    ),
+    shortlist_size: int = typer.Option(
+        15,
+        "--shortlist-size",
+        help="How many free agents the screening stage shortlists",
+    ),
+    deep_dive_budget: int = typer.Option(
+        3,
+        "--deep-dive-budget",
+        help="Reserve fresh web-search calls the decision stage may spend",
+    ),
+    no_submit: bool = typer.Option(
+        False,
+        "--no-submit",
+        help="Skip the transaction call entirely (still respects shadow mode either way)",
+    ),
+) -> None:
+    """
+    Roster evaluation -> free-agent screening -> deep evaluation ->
+    GM decision. 4 OpenAI calls plus up to --deep-dive-budget more for
+    fresh research the decision stage specifically asks for. Submits via
+    the transactions client, which shadows unless FANTASY_GM_TRANSACTIONS_MODE
+    is live AND is passed confirm=True — this pipeline never passes
+    confirm=True itself, per the "shadow everything first" policy.
+    """
+    from fantasy_gm.waiver.pipeline import run_waiver_pipeline
+
+    settings = get_settings()
+    client = ESPNClient(settings)
+
+    result = run_waiver_pipeline(
+        client,
+        team_id=team_id or settings.espn_team_id,
+        free_agent_pool_size=pool_size,
+        shortlist_size=shortlist_size,
+        deep_dive_budget=deep_dive_budget,
+        attempt_transaction=not no_submit,
+    )
+
+    console.print(
+        f"[bold]Roster summary:[/bold] {result.roster_analysis.summary}"
+    )
+    console.print(
+        f"[bold]Positional needs:[/bold] "
+        f"{', '.join(result.roster_analysis.positional_needs) or 'none'}"
+    )
+    console.print(
+        f"[bold]Shortlist:[/bold] {len(result.shortlist)} candidates"
+    )
+    console.print(
+        f"[bold]Candidate moves:[/bold] {len(result.candidate_moves)}"
+    )
+    console.print(
+        f"[bold]Deep dives used:[/bold] "
+        f"{len(result.deep_dives_used)}/{deep_dive_budget}"
+    )
+    console.print()
+    console.print(
+        f"[bold cyan]GM decision:[/bold cyan] {result.decision.action}"
+    )
+    if result.decision.action == "add_drop":
+        console.print(
+            f"  ADD {result.decision.add_player_name} "
+            f"({result.decision.add_player_id}) / "
+            f"DROP {result.decision.drop_player_name} "
+            f"({result.decision.drop_player_id})"
+        )
+    console.print(f"  reasoning: {result.decision.reasoning}")
+    console.print(f"  confidence: {result.decision.confidence:.0%}")
+    console.print()
+    console.print(
+        f"[green]Calls used: {result.calls_used}. "
+        f"Executed live: {result.executed}[/green]"
+    )

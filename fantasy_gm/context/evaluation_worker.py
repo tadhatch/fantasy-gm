@@ -42,7 +42,7 @@ def build_player_universe(
 
     roster = load_team_roster(client, team_id)
     for entry in roster.entries:
-        candidates[entry.player_id] = _from_roster_entry(entry)
+        candidates[entry.player_id] = board_player_from_roster_entry(entry)
 
     roster_count = len(candidates)
 
@@ -59,7 +59,7 @@ def build_player_universe(
         if len(candidates) - roster_count >= free_agent_pool_size:
             break
 
-        candidate = _from_pool_entry(entry)
+        candidate = board_player_from_pool_entry(entry)
         if candidate is None or candidate.espn_id in candidates:
             continue
 
@@ -68,7 +68,7 @@ def build_player_universe(
     return list(candidates.values())
 
 
-def _from_roster_entry(entry: RosterEntry) -> BoardPlayer:
+def board_player_from_roster_entry(entry: RosterEntry) -> BoardPlayer:
     position = POSITION_IDS.get(
         entry.default_position_id, str(entry.default_position_id or "?")
     )
@@ -84,7 +84,7 @@ def _from_roster_entry(entry: RosterEntry) -> BoardPlayer:
     )
 
 
-def _from_pool_entry(entry: dict) -> BoardPlayer | None:
+def board_player_from_pool_entry(entry: dict) -> BoardPlayer | None:
     player = entry.get("player") or entry
     pos_id = player.get("defaultPositionId")
     position = POSITION_IDS.get(pos_id, str(pos_id or "?"))

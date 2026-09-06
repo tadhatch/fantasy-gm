@@ -267,6 +267,24 @@ class RailwayServiceManager:
             ),
         )
 
+    def launch_waiver_worker(
+        self,
+        *,
+        pool_size: int = 60,
+        shortlist_size: int = 15,
+        deep_dive_budget: int = 3,
+    ) -> RailwayService:
+        job_id = uuid.uuid4().hex[:8]
+        return self._launch_disposable_worker(
+            name=f"worker-waiver-{job_id}",
+            start_command=(
+                "fantasy-gm worker waiver "
+                f"--pool-size {pool_size} "
+                f"--shortlist-size {shortlist_size} "
+                f"--deep-dive-budget {deep_dive_budget}"
+            ),
+        )
+
     def _launch_disposable_worker(
         self,
         *,
