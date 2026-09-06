@@ -45,15 +45,16 @@ SHARED_VARIABLES = [
     "FANTASY_GM_CHAT_DEBUG",
 ]
 
-# Railway does not resolve a cross-service reference (${{Service.VAR}})
-# when it's used as the *value* of a project Shared Variable — only when
-# it's set directly on an actual service. So unlike everything in
-# SHARED_VARIABLES above, DATABASE_URL can't be routed through
-# `${{ shared.DATABASE_URL }}`; it has to be set directly on every
-# service that needs it, referencing the Postgres plugin service by name.
+# A cross-service reference to the Postgres plugin, set directly on each
+# service that needs DATABASE_URL rather than routed through a project
+# Shared Variable (a Shared Variable holding this same reference was
+# observed not to resolve). The spaces inside the braces are load-bearing
+# — Railway does not resolve `${{Service.VAR}}` without them, matching
+# the `${{ shared.NAME }}` form RailwayClient.attach_shared_variables()
+# already relies on for every other variable.
 DATABASE_URL_REFERENCE = os.getenv(
     "FANTASY_GM_DATABASE_URL_REFERENCE",
-    "${{Postgres.DATABASE_PRIVATE_URL}}",
+    "${{ Postgres.DATABASE_PRIVATE_URL }}",
 )
 
 def _has_actually_finished(service: RailwayService) -> bool:
