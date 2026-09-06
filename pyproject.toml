@@ -18,6 +18,7 @@ dependencies = [
   "polars>=1.0",
   "openai>=1.0",
   "websocket-client>=1.8",
+  "psycopg[binary]>=3.1",
 ]
 
 [project.scripts]

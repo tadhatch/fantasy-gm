@@ -3,12 +3,12 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
-from .store import ContextStore
+from .postgres_store import PostgresContextStore
 
 
 def render_context(limit: int | None = None) -> None:
     console = Console()
-    rows = list(ContextStore().load_all().values())
+    rows = list(PostgresContextStore().load_all().values())
     rows.sort(key=lambda r: abs(r.weighted_delta()), reverse=True)
     if limit is not None:
         rows = rows[:limit]

@@ -7,8 +7,11 @@ from dataclasses import dataclass
 from fantasy_gm.board.models import BoardPlayer
 
 from .models import AIContextResult
+from .postgres_store import PostgresContextStore
 from .router import ContextModelRouter
 from .store import ContextStore
+
+ContextStoreLike = ContextStore | PostgresContextStore
 
 
 @dataclass(slots=True)
@@ -24,14 +27,14 @@ def refresh_context(
     top: int = 50,
     force: bool = False,
     freshness_hours: int = 12,
-    store: ContextStore | None = None,
+    store: ContextStoreLike | None = None,
     router: ContextModelRouter | None = None,
     progress=None,
     current_pick: int | None = None,
     next_pick: int | None = None,
     max_deep_dives: int | None = None,
 ) -> list[AIContextResult]:
-    store = store or ContextStore()
+    store = store or PostgresContextStore()
 
     if router is None:
         router = ContextModelRouter(
@@ -144,9 +147,9 @@ def refresh_context(
 
 def resolve_context(
     player_pool: list[BoardPlayer],
-    store: ContextStore | None = None,
+    store: ContextStoreLike | None = None,
 ) -> ResolvedContext:
-    store = store or ContextStore()
+    store = store or PostgresContextStore()
     direct = store.load_all()
 
     name_map: dict[str, int] = {}
