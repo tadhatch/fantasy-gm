@@ -27,6 +27,22 @@ def _chatbot_enabled() -> bool:
     )
 
 
+def _safe_log_services(service_manager: RailwayServiceManager) -> None:
+    """
+    log_services() talks to Railway's API and has no retry of its own
+    beyond RailwayClient's connection/timeout handling — an auth hiccup
+    (e.g. a just-rotated token still propagating), rate limit, or other
+    transient failure should be logged and skipped, not take down the
+    whole supervisor process.
+    """
+    try:
+        service_manager.log_services()
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to list Railway services: {exc!r}[/red]"
+        )
+
+
 def run_supervisor(client: ESPNClient) -> None:
     console.print(
         "[bold green]Fantasy GM supervisor started in GM mode[/bold green]"
@@ -48,7 +64,7 @@ def run_supervisor(client: ESPNClient) -> None:
     )
 
     # Show everything currently visible to the supervisor.
-    service_manager.log_services()
+    _safe_log_services(service_manager)
 
     # Sweep up anything a previous supervisor run launched and never got
     # to clean up itself (e.g. it was redeployed/restarted mid-job).
@@ -60,14 +76,21 @@ def run_supervisor(client: ESPNClient) -> None:
     if own_service_name:
         protected_services.add(own_service_name)
 
-    orphans_deleted = service_manager.cleanup_finished_workers(
-        exclude=protected_services
-    )
-    if orphans_deleted:
+    try:
+        orphans_deleted = service_manager.cleanup_finished_workers(
+            exclude=protected_services
+        )
+        if orphans_deleted:
+            console.print(
+                f"[yellow][WORKER][/yellow] "
+                f"cleaned up {len(orphans_deleted)} orphaned finished "
+                f"service(s) from a previous run: "
+                f"{', '.join(orphans_deleted)}"
+            )
+    except Exception as exc:
         console.print(
-            f"[yellow][WORKER][/yellow] "
-            f"cleaned up {len(orphans_deleted)} orphaned finished "
-            f"service(s) from a previous run: {', '.join(orphans_deleted)}"
+            f"[bold red][WORKER][/bold red] "
+            f"Failed to sweep orphaned services: {exc!r}"
         )
 
     # The chatbot is no longer a child process of the supervisor.
@@ -131,7 +154,7 @@ def run_supervisor(client: ESPNClient) -> None:
             )
 
     console.print()
-    service_manager.log_services()
+    _safe_log_services(service_manager)
 
     poll_seconds = _poll_seconds()
 
