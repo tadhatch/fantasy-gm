@@ -268,6 +268,7 @@ class RailwayClient:
         service_id: str,
         name: str,
         value: str,
+        skip_deploys: bool = True,
     ) -> None:
         mutation = """
         mutation VariableUpsert($input: VariableUpsertInput!) {
@@ -284,6 +285,13 @@ class RailwayClient:
                     "serviceId": service_id,
                     "name": name,
                     "value": value,
+                    # Without this, each variable write triggers its own
+                    # redeploy. attach_shared_variables() writes ~30
+                    # variables in a row, which otherwise fires off ~30
+                    # overlapping, self-cancelling deployments before the
+                    # single explicit deploy_service() call this code
+                    # makes once everything is configured.
+                    "skipDeploys": skip_deploys,
                 }
             },
         )
