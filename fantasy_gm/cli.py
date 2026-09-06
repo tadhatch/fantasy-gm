@@ -1,7 +1,4 @@
 from __future__ import annotations
-import time
-
-from fantasy_gm.espn.draft import load_draft_picks
 
 
 import typer
@@ -23,6 +20,11 @@ from fantasy_gm.board.renderer import render_board
 from fantasy_gm.context.renderer import render_context
 from fantasy_gm.context.service import refresh_context
 from fantasy_gm.chatbot.cli_commands import build_chatbot_typer
+from fantasy_gm.espn.roster import (
+    current_scoring_period,
+    load_team_roster,
+)
+from fantasy_gm.espn.transactions import ESPNTransactionsClient, LineupMove
 from fantasy_gm.supervisor import run_supervisor
 
 
@@ -35,6 +37,11 @@ chatbot_app = build_chatbot_typer()
 app.add_typer(chatbot_app, name="chatbot")
 worker_app = typer.Typer(no_args_is_help=True, help="Run one-shot GM workers")
 app.add_typer(worker_app, name="worker")
+roster_app = typer.Typer(
+    no_args_is_help=True,
+    help="Roster reads and roster/waiver/trade transactions",
+)
+app.add_typer(roster_app, name="roster")
 
 
 @app.command()
@@ -234,73 +241,6 @@ def draft_watch(
         show_unknown=show_unknown,
     )
 
-    console = Console()
-
-    effective_league_id = (
-        league_id
-        if league_id is not None
-        else settings.espn_league_id
-    )
-
-    console.print(
-        f"[bold]Watching ESPN draft[/bold] "
-        f"league={effective_league_id} "
-        f"team={settings.espn_team_id}"
-    )
-
-    seen: dict[int, int] = {}
-
-    try:
-        while True:
-            draft_data, picks = load_draft_picks(client)
-
-            drafted = bool(draft_data.get("drafted"))
-            in_progress = bool(draft_data.get("inProgress"))
-
-            for pick in picks:
-                # ESPN uses -1 for an unfilled draft slot.
-                if pick.player_id <= 0:
-                    continue
-
-                previous = seen.get(pick.overall_pick)
-
-                if previous == pick.player_id:
-                    continue
-
-                seen[pick.overall_pick] = pick.player_id
-
-                ours = (
-                    " [bold green]THE RESERVISTS[/bold green]"
-                    if pick.team_id == settings.espn_team_id
-                    else ""
-                )
-
-                console.print(
-                    f"Pick {pick.overall_pick:>3} "
-                    f"(R{pick.round_id}.{pick.round_pick}) "
-                    f"Team {pick.team_id:>2} "
-                    f"→ ESPN player {pick.player_id}"
-                    f"{ours}"
-                )
-
-            filled = sum(
-                1
-                for pick in picks
-                if pick.player_id > 0
-            )
-
-            if drafted:
-                console.print(
-                    f"\n[green]Draft complete. "
-                    f"{filled}/{len(picks)} picks filled.[/green]"
-                )
-                break
-
-            time.sleep(poll_seconds)
-
-    except KeyboardInterrupt:
-        console.print("\n[yellow]Draft watcher stopped.[/yellow]")
-
 
 @draft_app.command("select")
 def draft_select(
@@ -365,6 +305,133 @@ def draft_run(
     )
 
     runner.run()
+
+
+@roster_app.command("show")
+def roster_show(
+    team_id: int | None = typer.Option(
+        None,
+        "--team-id",
+        help="Defaults to your configured team",
+    ),
+) -> None:
+    settings = get_settings()
+    client = ESPNClient(settings)
+    roster = load_team_roster(client, team_id or settings.espn_team_id)
+
+    table = Table(title=f"{roster.team_name} — roster")
+    table.add_column("Player ID", justify="right")
+    table.add_column("Player")
+    table.add_column("Slot", justify="right")
+    table.add_column("Injury")
+    for entry in roster.entries:
+        table.add_row(
+            str(entry.player_id),
+            entry.name,
+            str(entry.lineup_slot_id),
+            entry.injury_status or "-",
+        )
+    console.print(table)
+
+
+@roster_app.command("set-lineup")
+def roster_set_lineup(
+    move: list[str] = typer.Option(
+        ...,
+        "--move",
+        help="playerId:fromSlotId:toSlotId, repeatable",
+    ),
+    team_id: int | None = typer.Option(None, "--team-id"),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+) -> None:
+    settings = get_settings()
+    client = ESPNClient(settings)
+    txn = ESPNTransactionsClient(client)
+
+    moves = []
+    for raw in move:
+        player_id, from_slot, to_slot = raw.split(":")
+        moves.append(
+            LineupMove(
+                player_id=int(player_id),
+                from_slot_id=int(from_slot),
+                to_slot_id=int(to_slot),
+            )
+        )
+
+    period = current_scoring_period(client)
+    txn.set_lineup(
+        team_id=team_id or settings.espn_team_id,
+        moves=moves,
+        scoring_period_id=period,
+        confirm=confirm,
+    )
+
+
+@roster_app.command("add-drop")
+def roster_add_drop(
+    add: int | None = typer.Option(None, "--add"),
+    drop: int | None = typer.Option(None, "--drop"),
+    team_id: int | None = typer.Option(None, "--team-id"),
+    waiver: bool = typer.Option(False, "--waiver"),
+    bid: int | None = typer.Option(None, "--bid"),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+) -> None:
+    settings = get_settings()
+    client = ESPNClient(settings)
+    txn = ESPNTransactionsClient(client)
+
+    period = current_scoring_period(client)
+    txn.add_drop(
+        team_id=team_id or settings.espn_team_id,
+        add_player_id=add,
+        drop_player_id=drop,
+        scoring_period_id=period,
+        via_waiver=waiver,
+        bid_amount=bid,
+        confirm=confirm,
+    )
+
+
+@roster_app.command("propose-trade")
+def roster_propose_trade(
+    to_team_id: int = typer.Option(..., "--to"),
+    offer: list[int] = typer.Option(
+        ..., "--offer", help="Player ID you are giving up, repeatable"
+    ),
+    request: list[int] = typer.Option(
+        ..., "--request", help="Player ID you are asking for, repeatable"
+    ),
+    message: str = typer.Option("", "--message"),
+    team_id: int | None = typer.Option(None, "--team-id"),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+) -> None:
+    settings = get_settings()
+    client = ESPNClient(settings)
+    txn = ESPNTransactionsClient(client)
+
+    period = current_scoring_period(client)
+    txn.propose_trade(
+        proposing_team_id=team_id or settings.espn_team_id,
+        receiving_team_id=to_team_id,
+        players_offered=offer,
+        players_requested=request,
+        scoring_period_id=period,
+        message=message,
+        confirm=confirm,
+    )
 
 
 @worker_app.command("test")
