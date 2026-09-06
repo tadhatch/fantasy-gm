@@ -144,7 +144,6 @@ def _evaluation_due(interval_hours: float) -> bool:
 
 
 def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
-    pool_size = int(os.getenv("FANTASY_GM_EVALUATION_POOL_SIZE", "50"))
     max_calls = int(os.getenv("FANTASY_GM_EVALUATION_MAX_CALLS", "20"))
     freshness_hours = int(
         os.getenv("FANTASY_GM_EVALUATION_FRESHNESS_HOURS", "24")
@@ -152,7 +151,6 @@ def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
 
     try:
         worker = service_manager.launch_evaluation_worker(
-            pool_size=pool_size,
             max_calls=max_calls,
             freshness_hours=freshness_hours,
         )

@@ -25,47 +25,25 @@ EVALUATED_POSITIONS = {"QB", "RB", "WR", "TE", "K", "D/ST"}
 ProgressCallback = Callable[[int, int, BoardPlayer, str], None]
 
 
-def build_player_universe(
+def build_roster_universe(
     client: ESPNClient,
     *,
     team_id: int,
-    free_agent_pool_size: int = 50,
 ) -> list[BoardPlayer]:
     """
-    Everyone this run should consider researching: the whole roster (so
-    lineup/trade decisions have current context on every player we
-    actually own) plus the highest-ownership players league-wide (so
-    waiver targets and other teams' trade-relevant assets get covered
-    too, not just our own roster).
+    Just our own roster. This worker's job is keeping our players' real-
+    world context fresh for lineup decisions — the player universe a
+    task needs depends on the task: waivers need free agents compared
+    against the roster (waiver/pipeline.py does its own screening of
+    those), trades need other teams' rosters compared against ours. A
+    single blanket "roster + top-owned players league-wide" universe
+    doesn't serve any of those well — it mostly wastes research calls on
+    players nobody here could actually add or is deciding about.
     """
-    candidates: dict[int, BoardPlayer] = {}
-
     roster = load_team_roster(client, team_id)
-    for entry in roster.entries:
-        candidates[entry.player_id] = board_player_from_roster_entry(entry)
-
-    roster_count = len(candidates)
-
-    pool_data = client.get_player_pool(
-        limit=max(500, free_agent_pool_size * 4)
-    )
-    pool = (
-        pool_data.get("players", [])
-        if isinstance(pool_data, dict)
-        else pool_data
-    )
-
-    for entry in pool:
-        if len(candidates) - roster_count >= free_agent_pool_size:
-            break
-
-        candidate = board_player_from_pool_entry(entry)
-        if candidate is None or candidate.espn_id in candidates:
-            continue
-
-        candidates[candidate.espn_id] = candidate
-
-    return list(candidates.values())
+    return [
+        board_player_from_roster_entry(entry) for entry in roster.entries
+    ]
 
 
 def board_player_from_roster_entry(entry: RosterEntry) -> BoardPlayer:
@@ -131,13 +109,12 @@ def evaluate_players(
     store: ContextStoreLike | None = None,
     router: ContextModelRouter | None = None,
     freshness_hours: int = 24,
-    free_agent_pool_size: int = 50,
     max_research_calls: int = 20,
     max_deep_dives: int | None = None,
     progress: ProgressCallback | None = None,
 ) -> list[AIContextResult]:
     """
-    Refresh real-world evaluations for the roster + top free agents.
+    Refresh real-world evaluations for the roster.
 
     This is the recurring counterpart to context.service.refresh_context
     (which only ever covered the draft board): same research pipeline and
@@ -165,11 +142,7 @@ def evaluate_players(
             os.getenv("FANTASY_GM_MAX_DEEP_DIVES_PER_REFRESH", "8")
         )
 
-    universe = build_player_universe(
-        client,
-        team_id=team_id,
-        free_agent_pool_size=free_agent_pool_size,
-    )
+    universe = build_roster_universe(client, team_id=team_id)
 
     existing = store.load_all()
     refreshed: list[AIContextResult] = []

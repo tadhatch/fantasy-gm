@@ -457,11 +457,6 @@ def worker_evaluate(
         "--team-id",
         help="Defaults to your configured team",
     ),
-    pool_size: int = typer.Option(
-        50,
-        "--pool-size",
-        help="How many top-owned free agents to research alongside the roster",
-    ),
     max_calls: int = typer.Option(
         20,
         "--max-calls",
@@ -474,9 +469,12 @@ def worker_evaluate(
     ),
 ) -> None:
     """
-    Refresh real-world evaluations (injury/role/news) for the roster plus
-    top free agents, storing results in Postgres for lineup/waiver/trade
-    decisions to read. Makes real OpenAI API calls with web search.
+    Refresh real-world evaluations (injury/role/news) for the roster,
+    storing results in Postgres for lineup decisions to read. Free
+    agents and other rosters are each task's own concern (see
+    `worker waiver`, which does its own free-agent screening), not this
+    worker's — it only ever looks at players we actually own. Makes
+    real OpenAI API calls with web search.
     """
     from fantasy_gm.context.evaluation_worker import evaluate_players
 
@@ -489,7 +487,6 @@ def worker_evaluate(
     results = evaluate_players(
         client,
         team_id=team_id or settings.espn_team_id,
-        free_agent_pool_size=pool_size,
         max_research_calls=max_calls,
         freshness_hours=freshness_hours,
         progress=progress,
