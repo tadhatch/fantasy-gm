@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -39,15 +40,34 @@ class RailwayClient:
         query: str,
         variables: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        response = self.session.post(
-            RAILWAY_GRAPHQL_URL,
-            json={
-                "query": query,
-                "variables": variables or {},
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
+        attempts = 3
+
+        for attempt in range(1, attempts + 1):
+            try:
+                response = self.session.post(
+                    RAILWAY_GRAPHQL_URL,
+                    json={
+                        "query": query,
+                        "variables": variables or {},
+                    },
+                    timeout=30,
+                )
+                response.raise_for_status()
+                break
+
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            ) as exc:
+                print(
+                    f"Railway request failed "
+                    f"(attempt {attempt}/{attempts}): {exc!r}"
+                )
+
+                if attempt == attempts:
+                    raise
+
+                time.sleep(2 ** (attempt - 1))
 
         payload = response.json()
 

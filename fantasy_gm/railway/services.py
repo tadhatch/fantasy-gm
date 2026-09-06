@@ -96,38 +96,49 @@ class RailwayServiceManager:
             f"created service id={service.id}"
         )
 
-        console.print(
-            f"[cyan][CHATBOT][/cyan] "
-            "attaching shared variables"
-        )
+        try:
+            console.print(
+                f"[cyan][CHATBOT][/cyan] "
+                "attaching shared variables"
+            )
 
-        self.client.attach_shared_variables(
-            service_id=service.id,
-            variable_names=SHARED_VARIABLES,
-        )
+            self.client.attach_shared_variables(
+                service_id=service.id,
+                variable_names=SHARED_VARIABLES,
+            )
 
-        console.print(
-            f"[green][CHATBOT][/green] "
-            f"attached {len(SHARED_VARIABLES)} shared variables"
-        )
+            console.print(
+                f"[green][CHATBOT][/green] "
+                f"attached {len(SHARED_VARIABLES)} shared variables"
+            )
 
-        self.client.configure_service(
-            service_id=service.id,
-            start_command="fantasy-gm chatbot run",
-            restart_policy="ON_FAILURE",
-        )
+            self.client.configure_service(
+                service_id=service.id,
+                start_command="fantasy-gm chatbot run",
+                restart_policy="ON_FAILURE",
+            )
 
-        console.print(
-            "[cyan][CHATBOT][/cyan] "
-            "configured start command and restart policy"
-        )
+            console.print(
+                "[cyan][CHATBOT][/cyan] "
+                "configured start command and restart policy"
+            )
 
-        deployment_id = self.client.deploy_service(service.id)
+            deployment_id = self.client.deploy_service(service.id)
 
-        console.print(
-            f"[green][CHATBOT][/green] "
-            f"deployment requested id={deployment_id}"
-        )
+            console.print(
+                f"[green][CHATBOT][/green] "
+                f"deployment requested id={deployment_id}"
+            )
+
+        except Exception:
+            console.print(
+                f"[bold red][CHATBOT][/bold red] "
+                f"provisioning failed after creation; "
+                f"deleting orphaned service {name} "
+                "(it would otherwise deploy with no start command)"
+            )
+            self.client.delete_service(service.id)
+            raise
 
         return service
 
@@ -147,46 +158,57 @@ class RailwayServiceManager:
 
         console.print(
             f"[cyan][WORKER][/cyan] "
-            "attaching shared variables"
-        )
-
-        self.client.attach_shared_variables(
-            service_id=service.id,
-            variable_names=SHARED_VARIABLES,
-        )
-
-        console.print(
-            f"[green][WORKER][/green] "
-            f"attached {len(SHARED_VARIABLES)} shared variables"
-        )
-
-        console.print(
-            f"[cyan][WORKER][/cyan] "
             f"created {name} id={service.id}"
         )
 
-        self.client.configure_service(
-            service_id=service.id,
-            start_command=(
-                "fantasy-gm worker test "
-                f"--job-id {job_id} "
-                "--sleep 600"
-            ),
-            restart_policy="NEVER",
-        )
+        try:
+            console.print(
+                f"[cyan][WORKER][/cyan] "
+                "attaching shared variables"
+            )
 
-        console.print(
-            f"[cyan][WORKER][/cyan] "
-            f"configured {name}: restart=NEVER runtime=600s"
-        )
+            self.client.attach_shared_variables(
+                service_id=service.id,
+                variable_names=SHARED_VARIABLES,
+            )
 
-        deployment_id = self.client.deploy_service(service.id)
+            console.print(
+                f"[green][WORKER][/green] "
+                f"attached {len(SHARED_VARIABLES)} shared variables"
+            )
 
-        console.print(
-            f"[green][WORKER][/green] "
-            f"deployment requested for {name} "
-            f"id={deployment_id}"
-        )
+            self.client.configure_service(
+                service_id=service.id,
+                start_command=(
+                    "fantasy-gm worker test "
+                    f"--job-id {job_id} "
+                    "--sleep 600"
+                ),
+                restart_policy="NEVER",
+            )
+
+            console.print(
+                f"[cyan][WORKER][/cyan] "
+                f"configured {name}: restart=NEVER runtime=600s"
+            )
+
+            deployment_id = self.client.deploy_service(service.id)
+
+            console.print(
+                f"[green][WORKER][/green] "
+                f"deployment requested for {name} "
+                f"id={deployment_id}"
+            )
+
+        except Exception:
+            console.print(
+                f"[bold red][WORKER][/bold red] "
+                f"provisioning failed after creation; "
+                f"deleting orphaned service {name} "
+                "(it would otherwise deploy with no start command)"
+            )
+            self.client.delete_service(service.id)
+            raise
 
         return service
 
