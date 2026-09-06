@@ -27,6 +27,13 @@ class RailwayService:
 
 class RailwayClient:
     def __init__(self) -> None:
+        # RAILWAY_API_TOKEN must be an Account Token (Account Settings ->
+        # Tokens), not a Project Token (Project Settings -> Tokens).
+        # Project Tokens authenticate CI/deploy-style operations
+        # (serviceCreate, variableUpsert, serviceInstanceUpdate,
+        # serviceInstanceDeployV2 all work with one) but are not
+        # authorized for serviceDelete — that requires authenticating as
+        # an actual account via Bearer auth.
         self.token = os.environ["RAILWAY_API_TOKEN"]
         self.project_id = os.environ["RAILWAY_PROJECT_ID"]
         self.environment_id = os.environ["RAILWAY_ENVIRONMENT_ID"]
@@ -34,7 +41,7 @@ class RailwayClient:
         self.session = requests.Session()
         self.session.headers.update(
             {
-                "Project-Access-Token": self.token,
+                "Authorization": f"Bearer {self.token}",
                 "Content-Type": "application/json",
             }
         )
