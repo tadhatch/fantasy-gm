@@ -21,7 +21,6 @@ SHARED_VARIABLES = [
     "ESPN_S2",
     "ESPN_POLL_SECONDS",
     "OPENAI_API_KEY",
-    "DATABASE_URL",
     "FANTASY_GM_FAVORITE_TEAM",
     "FANTASY_GM_FANDOM_WEIGHT",
     "FANTASY_GM_CONTEXT_MODEL",
@@ -45,6 +44,17 @@ SHARED_VARIABLES = [
     "FANTASY_GM_CHAT_PROACTIVE",
     "FANTASY_GM_CHAT_DEBUG",
 ]
+
+# Railway does not resolve a cross-service reference (${{Service.VAR}})
+# when it's used as the *value* of a project Shared Variable — only when
+# it's set directly on an actual service. So unlike everything in
+# SHARED_VARIABLES above, DATABASE_URL can't be routed through
+# `${{ shared.DATABASE_URL }}`; it has to be set directly on every
+# service that needs it, referencing the Postgres plugin service by name.
+DATABASE_URL_REFERENCE = os.getenv(
+    "FANTASY_GM_DATABASE_URL_REFERENCE",
+    "${{Postgres.DATABASE_PRIVATE_URL}}",
+)
 
 def _has_actually_finished(service: RailwayService) -> bool:
     """
@@ -182,6 +192,17 @@ class RailwayServiceManager:
                 f"attached {len(SHARED_VARIABLES)} shared variables"
             )
 
+            self.client.set_variable(
+                service_id=service.id,
+                name="DATABASE_URL",
+                value=DATABASE_URL_REFERENCE,
+            )
+
+            console.print(
+                f"[green][CHATBOT][/green] "
+                f"attached DATABASE_URL ({DATABASE_URL_REFERENCE})"
+            )
+
             self.client.configure_service(
                 service_id=service.id,
                 start_command="fantasy-gm chatbot run",
@@ -248,6 +269,17 @@ class RailwayServiceManager:
             console.print(
                 f"[green][WORKER][/green] "
                 f"attached {len(SHARED_VARIABLES)} shared variables"
+            )
+
+            self.client.set_variable(
+                service_id=service.id,
+                name="DATABASE_URL",
+                value=DATABASE_URL_REFERENCE,
+            )
+
+            console.print(
+                f"[green][WORKER][/green] "
+                f"attached DATABASE_URL ({DATABASE_URL_REFERENCE})"
             )
 
             self.client.configure_service(
