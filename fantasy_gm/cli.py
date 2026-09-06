@@ -448,3 +448,51 @@ def worker_test(
         job_id=job_id,
         sleep_seconds=sleep_seconds,
     )
+
+
+@worker_app.command("evaluate")
+def worker_evaluate(
+    team_id: int | None = typer.Option(
+        None,
+        "--team-id",
+        help="Defaults to your configured team",
+    ),
+    pool_size: int = typer.Option(
+        50,
+        "--pool-size",
+        help="How many top-owned free agents to research alongside the roster",
+    ),
+    max_calls: int = typer.Option(
+        20,
+        "--max-calls",
+        help="Research call budget for this run (real OpenAI API cost)",
+    ),
+    freshness_hours: int = typer.Option(
+        24,
+        "--freshness-hours",
+        help="Skip players researched more recently than this",
+    ),
+) -> None:
+    """
+    Refresh real-world evaluations (injury/role/news) for the roster plus
+    top free agents, storing results in Postgres for lineup/waiver/trade
+    decisions to read. Makes real OpenAI API calls with web search.
+    """
+    from fantasy_gm.context.evaluation_worker import evaluate_players
+
+    settings = get_settings()
+    client = ESPNClient(settings)
+
+    def progress(i: int, total: int, player, status: str) -> None:
+        console.print(f"[{i:>3}/{total}] {status:>20}  {player.name}")
+
+    results = evaluate_players(
+        client,
+        team_id=team_id or settings.espn_team_id,
+        free_agent_pool_size=pool_size,
+        max_research_calls=max_calls,
+        freshness_hours=freshness_hours,
+        progress=progress,
+    )
+
+    console.print(f"[green]Evaluated {len(results)} player(s).[/green]")

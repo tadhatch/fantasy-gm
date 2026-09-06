@@ -74,6 +74,21 @@ class PostgresContextStore:
 
         return {row["espn_id"]: self._decode(row) for row in rows}
 
+    def latest_researched_at(self) -> datetime | None:
+        """
+        When the most recent evaluation of any player was written. Used
+        to decide whether a new evaluation run is due, without needing
+        to track "last dispatched" in the supervisor's own memory — which
+        would reset (and could re-trigger unnecessarily) on every
+        restart.
+        """
+        query = "SELECT MAX(researched_at) AS latest FROM player_evaluations"
+
+        with self._connect() as conn:
+            row = conn.execute(query).fetchone()
+
+        return row["latest"] if row else None
+
     def get(self, espn_id: int) -> AIContextResult | None:
         query = """
             SELECT *

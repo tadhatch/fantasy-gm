@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import time
 import threading
+from datetime import datetime, timezone
 
 from rich.console import Console
 
@@ -12,6 +13,8 @@ from fantasy_gm.railway.services import RailwayServiceManager
 
 
 console = Console()
+
+EVALUATION_WORKER_PREFIX = "worker-evaluate-"
 
 
 def _poll_seconds() -> int:
@@ -81,6 +84,95 @@ def _sweep_orphans(service_manager: RailwayServiceManager) -> None:
         console.print(
             f"[bold red][WORKER][/bold red] "
             f"Failed to sweep orphaned services: {exc!r}"
+        )
+
+
+def _evaluation_enabled() -> bool:
+    return (
+        os.getenv("FANTASY_GM_EVALUATION_ENABLED", "true")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+
+
+def _evaluation_already_running(
+    service_manager: RailwayServiceManager,
+) -> bool:
+    try:
+        services = service_manager.client.list_services()
+    except Exception:
+        # Can't tell either way — err toward not double-launching.
+        return True
+
+    return any(
+        s.name.startswith(EVALUATION_WORKER_PREFIX)
+        and not s.deployment_stopped
+        for s in services
+    )
+
+
+def _evaluation_due(interval_hours: float) -> bool:
+    from fantasy_gm.context.postgres_store import PostgresContextStore
+
+    try:
+        latest = PostgresContextStore().latest_researched_at()
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to check evaluation freshness: {exc!r}[/red]"
+        )
+        return False
+
+    if latest is None:
+        return True
+
+    if latest.tzinfo is None:
+        latest = latest.replace(tzinfo=timezone.utc)
+
+    elapsed = datetime.now(timezone.utc) - latest
+    return elapsed.total_seconds() >= interval_hours * 3600
+
+
+def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
+    pool_size = int(os.getenv("FANTASY_GM_EVALUATION_POOL_SIZE", "50"))
+    max_calls = int(os.getenv("FANTASY_GM_EVALUATION_MAX_CALLS", "20"))
+    freshness_hours = int(
+        os.getenv("FANTASY_GM_EVALUATION_FRESHNESS_HOURS", "24")
+    )
+
+    try:
+        worker = service_manager.launch_evaluation_worker(
+            pool_size=pool_size,
+            max_calls=max_calls,
+            freshness_hours=freshness_hours,
+        )
+
+        console.print(
+            f"[cyan][WORKER][/cyan] "
+            f"Starting lifecycle monitor for {worker.name}"
+        )
+
+        # Rough estimate only — deployment_stopped is the real completion
+        # signal; this just sets wait_and_delete's safety-net ceiling.
+        # Web-search research calls (and occasional terra escalations)
+        # are slow and variable, so this errs generous.
+        expected_runtime_seconds = max_calls * 30
+
+        cleanup_thread = threading.Thread(
+            target=service_manager.wait_and_delete,
+            args=(worker,),
+            kwargs={
+                "expected_runtime_seconds": expected_runtime_seconds
+            },
+            daemon=True,
+            name=f"cleanup-{worker.name}",
+        )
+        cleanup_thread.start()
+
+    except Exception as exc:
+        console.print(
+            f"[bold red][WORKER][/bold red] "
+            f"Failed to launch evaluation worker: {exc!r}"
         )
 
 
@@ -194,6 +286,19 @@ def run_supervisor(client: ESPNClient) -> None:
 
             service_manager.log_services()
             _sweep_orphans(service_manager)
+
+            if _evaluation_enabled():
+                interval_hours = float(
+                    os.getenv("FANTASY_GM_EVALUATION_INTERVAL_HOURS", "24")
+                )
+                if _evaluation_due(
+                    interval_hours
+                ) and not _evaluation_already_running(service_manager):
+                    console.print(
+                        "[cyan][WORKER][/cyan] "
+                        "player evaluation due; dispatching"
+                    )
+                    _dispatch_evaluation_worker(service_manager)
 
         except Exception as exc:
             console.print(

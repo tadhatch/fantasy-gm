@@ -240,8 +240,52 @@ class RailwayServiceManager:
         sleep_seconds: int = 240,
     ) -> RailwayService:
         job_id = uuid.uuid4().hex[:8]
-        name = f"worker-test-{job_id}"
+        return self._launch_disposable_worker(
+            name=f"worker-test-{job_id}",
+            start_command=(
+                "fantasy-gm worker test "
+                f"--job-id {job_id} "
+                f"--sleep {sleep_seconds}"
+            ),
+        )
 
+    def launch_evaluation_worker(
+        self,
+        *,
+        pool_size: int = 50,
+        max_calls: int = 20,
+        freshness_hours: int = 24,
+    ) -> RailwayService:
+        job_id = uuid.uuid4().hex[:8]
+        return self._launch_disposable_worker(
+            name=f"worker-evaluate-{job_id}",
+            start_command=(
+                "fantasy-gm worker evaluate "
+                f"--pool-size {pool_size} "
+                f"--max-calls {max_calls} "
+                f"--freshness-hours {freshness_hours}"
+            ),
+        )
+
+    def _launch_disposable_worker(
+        self,
+        *,
+        name: str,
+        start_command: str,
+        restart_policy: str = "NEVER",
+    ) -> RailwayService:
+        """
+        Shared provisioning sequence for any one-shot worker: create the
+        service, attach shared variables + DATABASE_URL, configure the
+        start command, then deploy.
+
+        Only a failure before deploy is treated as fatal (the service
+        genuinely has no valid start command yet, so discarding it is
+        safe). A failed deploy call is logged but the service is still
+        handed back — Railway has been observed to deploy anyway despite
+        returning an error here, so the caller should keep tracking it
+        rather than assume it failed.
+        """
         console.print(
             f"[yellow][WORKER][/yellow] "
             f"creating disposable worker {name}"
@@ -286,23 +330,16 @@ class RailwayServiceManager:
 
             self.client.configure_service(
                 service_id=service.id,
-                start_command=(
-                    "fantasy-gm worker test "
-                    f"--job-id {job_id} "
-                    f"--sleep {sleep_seconds}"
-                ),
-                restart_policy="NEVER",
+                start_command=start_command,
+                restart_policy=restart_policy,
             )
 
             console.print(
                 f"[cyan][WORKER][/cyan] "
-                f"configured {name}: restart=NEVER runtime={sleep_seconds}s"
+                f"configured {name}: restart={restart_policy}"
             )
 
         except Exception:
-            # Nothing has been deployed yet at this point, so the service
-            # really is unusable (no valid start command) and safe to
-            # discard entirely.
             console.print(
                 f"[bold red][WORKER][/bold red] "
                 f"provisioning failed before deploy for {name}; "
@@ -321,13 +358,6 @@ class RailwayServiceManager:
             )
 
         except Exception as exc:
-            # Railway has been observed to deploy a service anyway even
-            # when this call returns an error (e.g. a transient "deployment
-            # rate limit exceeded"). We can't tell from this response alone
-            # whether it actually took effect, so don't delete or abandon
-            # tracking here — hand the service back so the caller still
-            # monitors it and cleans it up once it's actually done,
-            # whichever way this turns out.
             console.print(
                 f"[bold yellow][WORKER][/bold yellow] "
                 f"deploy request for {name} returned an error ({exc!r}); "
