@@ -321,10 +321,7 @@ def _prefilter_free_agents(
 
     candidates = []
     for entry in raw_pool:
-        on_team = entry.get("onTeamId")
-        if on_team not in (0, None):
-            continue
-
+        # board_player_from_pool_entry() already filters to free agents.
         candidate = board_player_from_pool_entry(entry)
         if candidate is None or candidate.espn_id in rostered_ids:
             continue

@@ -85,6 +85,19 @@ def board_player_from_roster_entry(entry: RosterEntry) -> BoardPlayer:
 
 
 def board_player_from_pool_entry(entry: dict) -> BoardPlayer | None:
+    """
+    Only returns a candidate for an actual free agent in this league.
+
+    get_player_pool() sorts by ESPN-wide ownership percentage, not by
+    availability in this specific league — without this check, the
+    "top owned" pool is dominated by whoever the biggest global stars
+    are (locked on someone's roster in every league they're in), not
+    players anyone here could actually add.
+    """
+    on_team = entry.get("onTeamId")
+    if on_team not in (0, None):
+        return None
+
     player = entry.get("player") or entry
     pos_id = player.get("defaultPositionId")
     position = POSITION_IDS.get(pos_id, str(pos_id or "?"))

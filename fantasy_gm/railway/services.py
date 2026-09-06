@@ -58,7 +58,7 @@ DATABASE_URL_REFERENCE = os.getenv(
     "${{Postgres.DATABASE_URL}}",
 )
 
-def _has_actually_finished(service: RailwayService) -> bool:
+def has_actually_finished(service: RailwayService) -> bool:
     """
     True only once a deployment reached SUCCESS (i.e. actually started
     running) and has since stopped.
@@ -95,7 +95,7 @@ class RailwayServiceManager:
         )
 
         for service in services:
-            if service.name in self._finished or _has_actually_finished(
+            if service.name in self._finished or has_actually_finished(
                 service
             ):
                 status = "FINISHED"
@@ -131,7 +131,7 @@ class RailwayServiceManager:
             if service.name in exclude:
                 continue
 
-            if not _has_actually_finished(service):
+            if not has_actually_finished(service):
                 continue
 
             console.print(
@@ -469,7 +469,7 @@ class RailwayServiceManager:
                 f"stopped={current.deployment_stopped}"
             )
 
-            if _has_actually_finished(current):
+            if has_actually_finished(current):
                 break
 
             if status in {"FAILED", "CRASHED", "REMOVED"}:

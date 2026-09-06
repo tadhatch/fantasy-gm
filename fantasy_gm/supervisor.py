@@ -9,7 +9,10 @@ from rich.console import Console
 
 from fantasy_gm.espn.client import ESPNClient
 from fantasy_gm.espn.league import load_league_summary
-from fantasy_gm.railway.services import RailwayServiceManager
+from fantasy_gm.railway.services import (
+    RailwayServiceManager,
+    has_actually_finished,
+)
 
 
 console = Console()
@@ -105,9 +108,16 @@ def _evaluation_already_running(
         # Can't tell either way — err toward not double-launching.
         return True
 
+    # A worker counts as "still running" unless it has genuinely
+    # finished — checking `deployment_stopped` alone has the same false
+    # positive has_actually_finished() exists to avoid: it reads True
+    # for a deployment attempt that was abandoned/superseded before ever
+    # actually starting, not just for one that ran to completion. Without
+    # this, a still-legitimately-deploying worker can look "not running"
+    # and get double-dispatched.
     return any(
         s.name.startswith(EVALUATION_WORKER_PREFIX)
-        and not s.deployment_stopped
+        and not has_actually_finished(s)
         for s in services
     )
 
