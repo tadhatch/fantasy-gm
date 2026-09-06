@@ -19,6 +19,10 @@ class RailwayService:
     name: str
     deployment_id: str | None = None
     deployment_status: str | None = None
+    # `status` alone stays SUCCESS for a worker's entire life, both while
+    # it's still running and after the process exits — it never reflects
+    # whether the container has actually stopped. `deploymentStopped` does.
+    deployment_stopped: bool | None = None
 
 
 class RailwayClient:
@@ -94,6 +98,7 @@ class RailwayClient:
                         latestDeployment {
                           id
                           status
+                          deploymentStopped
                         }
                       }
                     }
@@ -117,6 +122,7 @@ class RailwayClient:
 
             deployment_id = None
             deployment_status = None
+            deployment_stopped = None
 
             for instance_edge in node["serviceInstances"]["edges"]:
                 instance = instance_edge["node"]
@@ -129,6 +135,7 @@ class RailwayClient:
                 if deployment:
                     deployment_id = deployment["id"]
                     deployment_status = deployment["status"]
+                    deployment_stopped = deployment.get("deploymentStopped")
 
             services.append(
                 RailwayService(
@@ -136,6 +143,7 @@ class RailwayClient:
                     name=node["name"],
                     deployment_id=deployment_id,
                     deployment_status=deployment_status,
+                    deployment_stopped=deployment_stopped,
                 )
             )
 

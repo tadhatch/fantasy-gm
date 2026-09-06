@@ -11,9 +11,11 @@ from fantasy_gm.espn.league import load_league_summary
 from fantasy_gm.railway.services import RailwayServiceManager
 
 
-POLL_SECONDS = 60
-
 console = Console()
+
+
+def _poll_seconds() -> int:
+    return int(os.getenv("FANTASY_GM_SUPERVISOR_POLL_SECONDS", "60"))
 
 
 def _chatbot_enabled() -> bool:
@@ -47,6 +49,26 @@ def run_supervisor(client: ESPNClient) -> None:
 
     # Show everything currently visible to the supervisor.
     service_manager.log_services()
+
+    # Sweep up anything a previous supervisor run launched and never got
+    # to clean up itself (e.g. it was redeployed/restarted mid-job).
+    # RAILWAY_SERVICE_NAME is injected automatically by Railway; it's None
+    # when running outside Railway (e.g. locally), in which case there's
+    # nothing to protect beyond the chatbot.
+    protected_services = {os.getenv("FANTASY_GM_CHATBOT_SERVICE", "chatbot")}
+    own_service_name = os.getenv("RAILWAY_SERVICE_NAME")
+    if own_service_name:
+        protected_services.add(own_service_name)
+
+    orphans_deleted = service_manager.cleanup_finished_workers(
+        exclude=protected_services
+    )
+    if orphans_deleted:
+        console.print(
+            f"[yellow][WORKER][/yellow] "
+            f"cleaned up {len(orphans_deleted)} orphaned finished "
+            f"service(s) from a previous run: {', '.join(orphans_deleted)}"
+        )
 
     # The chatbot is no longer a child process of the supervisor.
     # Ensure it exists as its own persistent Railway service.
@@ -111,10 +133,12 @@ def run_supervisor(client: ESPNClient) -> None:
     console.print()
     service_manager.log_services()
 
+    poll_seconds = _poll_seconds()
+
     console.print()
     console.print(
         f"[green]Supervisor initialization complete.[/green] "
-        f"Polling every {POLL_SECONDS}s."
+        f"Polling every {poll_seconds}s."
     )
 
     while True:
@@ -138,4 +162,4 @@ def run_supervisor(client: ESPNClient) -> None:
                 f"[red]Supervisor error: {exc!r}[/red]"
             )
 
-        time.sleep(POLL_SECONDS)
+        time.sleep(poll_seconds)
