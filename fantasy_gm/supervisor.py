@@ -78,7 +78,13 @@ def run_supervisor(client: ESPNClient) -> None:
 
     if test_worker_on_start:
         try:
-            worker = service_manager.launch_test_worker()
+            test_worker_sleep_seconds = int(
+                os.getenv("FANTASY_GM_TEST_WORKER_SLEEP_SECONDS", "240")
+            )
+
+            worker = service_manager.launch_test_worker(
+                sleep_seconds=test_worker_sleep_seconds
+            )
 
             console.print(
                 f"[cyan][WORKER][/cyan] "
@@ -88,6 +94,9 @@ def run_supervisor(client: ESPNClient) -> None:
             cleanup_thread = threading.Thread(
                 target=service_manager.wait_and_delete,
                 args=(worker,),
+                kwargs={
+                    "expected_runtime_seconds": test_worker_sleep_seconds
+                },
                 daemon=True,
                 name=f"cleanup-{worker.name}",
             )

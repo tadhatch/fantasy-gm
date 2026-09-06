@@ -49,6 +49,12 @@ class RailwayServiceManager:
     def __init__(self) -> None:
         self.client = RailwayClient()
         self.repo = os.environ["FANTASY_GM_REPO"]
+        # Names of workers whose expected runtime has elapsed (or that have
+        # actually exited). Railway's own deployment status has no notion of
+        # "the job finished its work" — it goes to SUCCESS as soon as the
+        # container starts and stays there for the worker's whole life — so
+        # this is tracked here instead, populated by wait_and_delete().
+        self._finished: set[str] = set()
 
     def log_services(self) -> list[RailwayService]:
         services = self.client.list_services()
@@ -58,10 +64,12 @@ class RailwayServiceManager:
         )
 
         for service in services:
-            console.print(
-                f"  {service.name:<30} "
-                f"{service.deployment_status or 'NO DEPLOYMENT'}"
+            status = (
+                "FINISHED"
+                if service.name in self._finished
+                else (service.deployment_status or "NO DEPLOYMENT")
             )
+            console.print(f"  {service.name:<30} {status}")
 
         return services
 
@@ -133,16 +141,19 @@ class RailwayServiceManager:
         except Exception:
             console.print(
                 f"[bold red][CHATBOT][/bold red] "
-                f"provisioning failed after creation; "
-                f"deleting orphaned service {name} "
-                "(it would otherwise deploy with no start command)"
+                f"provisioning failed after creation for {name}; "
+                "it would otherwise deploy with no start command"
             )
-            self.client.delete_service(service.id)
+            self._try_delete_orphan(service.id, name, label="CHATBOT")
             raise
 
         return service
 
-    def launch_test_worker(self) -> RailwayService:
+    def launch_test_worker(
+        self,
+        *,
+        sleep_seconds: int = 240,
+    ) -> RailwayService:
         job_id = uuid.uuid4().hex[:8]
         name = f"worker-test-{job_id}"
 
@@ -182,14 +193,14 @@ class RailwayServiceManager:
                 start_command=(
                     "fantasy-gm worker test "
                     f"--job-id {job_id} "
-                    "--sleep 600"
+                    f"--sleep {sleep_seconds}"
                 ),
                 restart_policy="NEVER",
             )
 
             console.print(
                 f"[cyan][WORKER][/cyan] "
-                f"configured {name}: restart=NEVER runtime=600s"
+                f"configured {name}: restart=NEVER runtime={sleep_seconds}s"
             )
 
             deployment_id = self.client.deploy_service(service.id)
@@ -203,25 +214,69 @@ class RailwayServiceManager:
         except Exception:
             console.print(
                 f"[bold red][WORKER][/bold red] "
-                f"provisioning failed after creation; "
-                f"deleting orphaned service {name} "
-                "(it would otherwise deploy with no start command)"
+                f"provisioning failed after creation for {name}; "
+                "it would otherwise deploy with no start command"
             )
-            self.client.delete_service(service.id)
+            self._try_delete_orphan(service.id, name, label="WORKER")
             raise
 
         return service
+
+    def _try_delete_orphan(
+        self,
+        service_id: str,
+        name: str,
+        *,
+        label: str,
+    ) -> bool:
+        """
+        Best-effort cleanup. Never raises: a failure here must not mask
+        whatever error actually triggered the cleanup, and the caller
+        needs to know the service may still be sitting there so it can
+        say so.
+        """
+        try:
+            self.client.delete_service(service_id)
+        except Exception as exc:
+            console.print(
+                f"[bold red][{label}][/bold red] "
+                f"could not delete {name} automatically ({exc!r}); "
+                "delete it manually in the Railway dashboard"
+            )
+            return False
+
+        console.print(
+            f"[green][{label}][/green] deleted {name}"
+        )
+        return True
 
     def wait_and_delete(
         self,
         service: RailwayService,
         *,
+        expected_runtime_seconds: float,
         poll_seconds: int = 15,
+        grace_seconds: float = 20.0,
     ) -> None:
+        """
+        Delete `service` once its job has finished.
+
+        Railway's deployment status only tracks build/deploy lifecycle —
+        it reaches SUCCESS as soon as the container starts and stays there
+        for the worker's entire life, so it cannot tell us when the job
+        itself is done. Since the supervisor is the one that launched the
+        worker with a known runtime, it tracks completion by elapsed time
+        instead (plus a grace window), and only reacts early to a genuine
+        failure status.
+        """
         console.print(
             f"[cyan][WORKER][/cyan] "
-            f"monitoring {service.name}"
+            f"monitoring {service.name} "
+            f"(expected runtime {expected_runtime_seconds:.0f}s)"
         )
+
+        deadline = time.monotonic() + expected_runtime_seconds + grace_seconds
+        status = "UNKNOWN"
 
         while True:
             current = self.client.find_service(service.name)
@@ -240,12 +295,10 @@ class RailwayServiceManager:
                 f"{service.name} status={status}"
             )
 
-            if status in {
-                "SUCCESS",
-                "FAILED",
-                "CRASHED",
-                "REMOVED",
-            }:
+            if status in {"FAILED", "CRASHED", "REMOVED"}:
+                break
+
+            if time.monotonic() >= deadline:
                 break
 
             time.sleep(poll_seconds)
@@ -256,12 +309,8 @@ class RailwayServiceManager:
             "deleting service"
         )
 
-        self.client.delete_service(service.id)
-
-        console.print(
-            f"[green][WORKER][/green] "
-            f"{service.name} deleted"
-        )
+        self._finished.add(service.name)
+        self._try_delete_orphan(service.id, service.name, label="WORKER")
 
     def set_variable(
         self,

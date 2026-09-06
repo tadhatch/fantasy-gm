@@ -438,7 +438,7 @@ def roster_propose_trade(
 def worker_test(
     job_id: str = typer.Option(..., "--job-id"),
     sleep_seconds: int = typer.Option(
-        600,
+        240,
         "--sleep",
     ),
 ) -> None:
