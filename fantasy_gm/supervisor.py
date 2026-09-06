@@ -43,6 +43,47 @@ def _safe_log_services(service_manager: RailwayServiceManager) -> None:
         )
 
 
+def _protected_services() -> set[str]:
+    # RAILWAY_SERVICE_NAME is injected automatically by Railway; it's None
+    # when running outside Railway (e.g. locally), in which case there's
+    # nothing to protect beyond the chatbot.
+    protected = {os.getenv("FANTASY_GM_CHATBOT_SERVICE", "chatbot")}
+    own_service_name = os.getenv("RAILWAY_SERVICE_NAME")
+    if own_service_name:
+        protected.add(own_service_name)
+    return protected
+
+
+def _sweep_orphans(service_manager: RailwayServiceManager) -> None:
+    """
+    Delete any controlled worker that has already finished.
+
+    This has to run continuously, not just once at startup: a worker's
+    wait_and_delete() thread lives only in the process that launched it,
+    so if that supervisor process gets redeployed/restarted while a
+    worker is still running, the thread watching it dies too — the
+    worker is orphaned with nothing left to notice when it finishes.
+    Running this sweep on every poll cycle means such a worker still
+    gets caught (and deleted) within one interval instead of sitting
+    there until the next full supervisor restart happens to catch it.
+    """
+    try:
+        deleted = service_manager.cleanup_finished_workers(
+            exclude=_protected_services()
+        )
+        if deleted:
+            console.print(
+                f"[yellow][WORKER][/yellow] "
+                f"cleaned up {len(deleted)} orphaned finished "
+                f"service(s): {', '.join(deleted)}"
+            )
+    except Exception as exc:
+        console.print(
+            f"[bold red][WORKER][/bold red] "
+            f"Failed to sweep orphaned services: {exc!r}"
+        )
+
+
 def run_supervisor(client: ESPNClient) -> None:
     console.print(
         "[bold green]Fantasy GM supervisor started in GM mode[/bold green]"
@@ -67,31 +108,9 @@ def run_supervisor(client: ESPNClient) -> None:
     _safe_log_services(service_manager)
 
     # Sweep up anything a previous supervisor run launched and never got
-    # to clean up itself (e.g. it was redeployed/restarted mid-job).
-    # RAILWAY_SERVICE_NAME is injected automatically by Railway; it's None
-    # when running outside Railway (e.g. locally), in which case there's
-    # nothing to protect beyond the chatbot.
-    protected_services = {os.getenv("FANTASY_GM_CHATBOT_SERVICE", "chatbot")}
-    own_service_name = os.getenv("RAILWAY_SERVICE_NAME")
-    if own_service_name:
-        protected_services.add(own_service_name)
-
-    try:
-        orphans_deleted = service_manager.cleanup_finished_workers(
-            exclude=protected_services
-        )
-        if orphans_deleted:
-            console.print(
-                f"[yellow][WORKER][/yellow] "
-                f"cleaned up {len(orphans_deleted)} orphaned finished "
-                f"service(s) from a previous run: "
-                f"{', '.join(orphans_deleted)}"
-            )
-    except Exception as exc:
-        console.print(
-            f"[bold red][WORKER][/bold red] "
-            f"Failed to sweep orphaned services: {exc!r}"
-        )
+    # to clean up itself (e.g. it was redeployed/restarted mid-job). Also
+    # runs every poll cycle below, not just here — see _sweep_orphans().
+    _sweep_orphans(service_manager)
 
     # The chatbot is no longer a child process of the supervisor.
     # Ensure it exists as its own persistent Railway service.
@@ -166,19 +185,15 @@ def run_supervisor(client: ESPNClient) -> None:
 
     while True:
         try:
-            # For now, periodically report the controlled service state.
-            #
             # Later this loop will also:
             # - watch for upcoming draft activity
             # - dispatch the draft worker
             # - schedule waiver analysis
             # - schedule lineup optimization
             # - detect incoming trades
-            #
-            # Railway worker lifecycle monitoring happens independently
-            # in its cleanup thread.
 
             service_manager.log_services()
+            _sweep_orphans(service_manager)
 
         except Exception as exc:
             console.print(
