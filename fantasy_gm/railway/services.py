@@ -48,13 +48,14 @@ SHARED_VARIABLES = [
 # A cross-service reference to the Postgres plugin, set directly on each
 # service that needs DATABASE_URL rather than routed through a project
 # Shared Variable (a Shared Variable holding this same reference was
-# observed not to resolve). The spaces inside the braces are load-bearing
-# — Railway does not resolve `${{Service.VAR}}` without them, matching
-# the `${{ shared.NAME }}` form RailwayClient.attach_shared_variables()
-# already relies on for every other variable.
+# observed not to resolve). This exact form — no spaces inside the
+# braces, referencing DATABASE_URL rather than DATABASE_PRIVATE_URL — is
+# the one confirmed working by hand in the Railway dashboard; other
+# variants (spaced, or pointed at DATABASE_PRIVATE_URL) resolved to an
+# empty string for reasons that were never pinned down.
 DATABASE_URL_REFERENCE = os.getenv(
     "FANTASY_GM_DATABASE_URL_REFERENCE",
-    "${{ Postgres.DATABASE_PRIVATE_URL }}",
+    "${{Postgres.DATABASE_URL}}",
 )
 
 def _has_actually_finished(service: RailwayService) -> bool:
