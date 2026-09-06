@@ -45,6 +45,24 @@ SHARED_VARIABLES = [
     "FANTASY_GM_CHAT_DEBUG",
 ]
 
+def _has_actually_finished(service: RailwayService) -> bool:
+    """
+    True only once a deployment reached SUCCESS (i.e. actually started
+    running) and has since stopped.
+
+    `deploymentStopped` alone is not enough: it is also true for a
+    deployment that was queued and then abandoned/superseded before it
+    ever ran (observed in practice when a deploy request is rate-limited
+    and Railway ends up cycling through several deployment attempts for
+    the same service) — that is not the job finishing, it is the job
+    never having started under that deployment id.
+    """
+    return (
+        service.deployment_status == "SUCCESS"
+        and bool(service.deployment_stopped)
+    )
+
+
 class RailwayServiceManager:
     def __init__(self) -> None:
         self.client = RailwayClient()
@@ -64,7 +82,9 @@ class RailwayServiceManager:
         )
 
         for service in services:
-            if service.name in self._finished or service.deployment_stopped:
+            if service.name in self._finished or _has_actually_finished(
+                service
+            ):
                 status = "FINISHED"
             else:
                 status = service.deployment_status or "NO DEPLOYMENT"
@@ -98,7 +118,7 @@ class RailwayServiceManager:
             if service.name in exclude:
                 continue
 
-            if not service.deployment_stopped:
+            if not _has_actually_finished(service):
                 continue
 
             console.print(
@@ -321,13 +341,16 @@ class RailwayServiceManager:
         """
         Delete `service` once its job has finished.
 
-        The authoritative signal is Railway's `deploymentStopped` flag on
-        the deployment — `status` alone stays SUCCESS for a worker's entire
-        life, both while it's still running and after the process exits,
-        so it can never tell us the job itself is done.
+        The authoritative signal is Railway's `deploymentStopped` flag,
+        but only once the deployment has actually reached SUCCESS —
+        `deploymentStopped` is also true for a deployment that was queued
+        and then abandoned/superseded before it ever ran (seen in practice
+        when a deploy request gets rate-limited and Railway cycles through
+        several deployment attempts for the same service), which is not
+        the job finishing.
         `expected_runtime_seconds` only sets a safety-net ceiling (default
-        3x the expected runtime plus a minute) in case `deploymentStopped`
-        never flips for some reason, so this doesn't poll forever.
+        3x the expected runtime plus a minute) in case a genuine
+        SUCCESS+stopped never arrives, so this doesn't poll forever.
         """
         max_wait = (
             max_wait_seconds
@@ -363,7 +386,7 @@ class RailwayServiceManager:
                 f"stopped={current.deployment_stopped}"
             )
 
-            if current.deployment_stopped:
+            if _has_actually_finished(current):
                 break
 
             if status in {"FAILED", "CRASHED", "REMOVED"}:
