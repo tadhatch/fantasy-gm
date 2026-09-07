@@ -53,7 +53,7 @@ def build_lineup_plan(
     for entry in roster.entries:
         weekly_points = projections.get(entry.player_id)
         available, adjusted, reason = _evaluate_availability(
-            entry, weekly_points, season=season, now=now
+            entry, weekly_points, season=season, week=week
         )
 
         evaluation_delta = 0.0
@@ -62,7 +62,9 @@ def build_lineup_plan(
             evaluation_delta = ctx.weighted_delta()
             adjusted += evaluation_delta
 
-        locked = is_team_locked(season, entry.pro_team_id, now=now)
+        locked = is_team_locked(
+            season, entry.pro_team_id, week=week, now=now
+        )
 
         candidates.append(
             LineupCandidate(
@@ -139,13 +141,13 @@ def _evaluate_availability(
     weekly_points: float | None,
     *,
     season: int,
-    now: datetime,
+    week: int,
 ) -> tuple[bool, float, str | None]:
     # Checked against the real schedule first, not inferred from a
     # missing projection — a missing projection could be a bye, but
     # could also just be missing data, and those deserve different
     # reasons shown to whoever's reading this.
-    on_bye = is_team_on_bye(season, entry.pro_team_id, now=now)
+    on_bye = is_team_on_bye(season, entry.pro_team_id, week=week)
     if on_bye is True:
         return False, 0.0, "on bye this week"
 

@@ -6,7 +6,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import psycopg
@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS schedule_snapshot (
 @dataclass(slots=True)
 class ScheduledGame:
     game_id: str
+    week: int
     home_team: str
     away_team: str
     kickoff: datetime
@@ -76,11 +77,14 @@ def load_season_games(
         schedule = nfl.load_schedules([season])
         for row in schedule.to_dicts():
             game_id = row.get("game_id")
+            week = row.get("week")
             gameday = row.get("gameday")
             gametime = row.get("gametime")
             home = row.get("home_team")
             away = row.get("away_team")
-            if not all((game_id, gameday, gametime, home, away)):
+            if not all(
+                (game_id, week is not None, gameday, gametime, home, away)
+            ):
                 continue
             try:
                 kickoff = datetime.strptime(
@@ -92,6 +96,7 @@ def load_season_games(
             games.append(
                 ScheduledGame(
                     game_id=str(game_id),
+                    week=int(week),
                     home_team=str(home),
                     away_team=str(away),
                     kickoff=kickoff,
@@ -109,54 +114,58 @@ def load_season_games(
     return games
 
 
-def team_kickoff_this_week(
-    season: int,
-    espn_pro_team_id: int | None,
-    *,
-    now: datetime,
-    force: bool = False,
-) -> datetime | None:
-    """
-    Kickoff time for this team's game closest to `now` (within 4 days
-    either way, so a bye week correctly returns None instead of matching
-    some other week's game).
-    """
+def _target_abbr(espn_pro_team_id: int | None) -> str | None:
     if espn_pro_team_id is None:
         return None
-
     espn_abbr = PRO_TEAM_ABBR.get(espn_pro_team_id)
     if espn_abbr is None:
         return None
+    return ESPN_TO_NFLVERSE_ABBR.get(espn_abbr, espn_abbr)
 
-    target = ESPN_TO_NFLVERSE_ABBR.get(espn_abbr, espn_abbr)
 
-    candidates = [
-        game.kickoff
-        for game in load_season_games(season, force=force)
-        if target in (game.home_team, game.away_team)
-        and abs((game.kickoff - now).days) <= 4
-    ]
+def team_kickoff_for_week(
+    season: int,
+    espn_pro_team_id: int | None,
+    *,
+    week: int,
+    force: bool = False,
+) -> datetime | None:
+    """
+    Kickoff time for this team's game in the given NFL week, or None if
+    they're on bye that week (or the team/schedule is unmappable).
 
-    if not candidates:
+    Matched by the schedule's own week number, not a day-window around
+    "now" — a week can span up to 5 calendar days (Thu-Mon, more with
+    international games), so a fixed-width window centered on "now" can
+    miss the later games of the same week entirely depending what day
+    it's checked from.
+    """
+    target = _target_abbr(espn_pro_team_id)
+    if target is None:
         return None
 
-    return min(candidates, key=lambda k: abs((k - now).total_seconds()))
+    for game in load_season_games(season, force=force):
+        if game.week == week and target in (game.home_team, game.away_team):
+            return game.kickoff
+
+    return None
 
 
 def is_team_locked(
     season: int,
     espn_pro_team_id: int | None,
     *,
+    week: int,
     now: datetime,
 ) -> bool:
     """
     True once this team's game this week has kicked off. Unknown team,
     unknown schedule, or a bye week is NOT the same as locked — those
     return False, since callers only need this to prevent moving an
-    already-locked player, not to reason about byes (already handled by
-    "no weekly projection" elsewhere).
+    already-locked player, not to reason about byes (handled separately
+    by is_team_on_bye()).
     """
-    kickoff = team_kickoff_this_week(season, espn_pro_team_id, now=now)
+    kickoff = team_kickoff_for_week(season, espn_pro_team_id, week=week)
     if kickoff is None:
         return False
     return now >= kickoff
@@ -166,32 +175,26 @@ def is_team_on_bye(
     season: int,
     espn_pro_team_id: int | None,
     *,
-    now: datetime,
+    week: int,
 ) -> bool | None:
     """
-    True if this team has no game in the current week's window (a real
-    bye, confirmed against the schedule), False if it does, None if this
+    True if this team has no game in the given NFL week (a real bye,
+    confirmed against the schedule), False if it does, None if this
     can't be determined at all (unmapped team or the schedule itself
     failed to load) — callers should fall back to another signal rather
     than assume either way when this is None, since it's genuinely
     unknown, not "not on bye".
     """
-    if espn_pro_team_id is None:
-        return None
-
-    espn_abbr = PRO_TEAM_ABBR.get(espn_pro_team_id)
-    if espn_abbr is None:
+    target = _target_abbr(espn_pro_team_id)
+    if target is None:
         return None
 
     games = load_season_games(season)
     if not games:
         return None
 
-    target = ESPN_TO_NFLVERSE_ABBR.get(espn_abbr, espn_abbr)
-
     has_game_this_week = any(
-        target in (game.home_team, game.away_team)
-        and abs((game.kickoff - now).days) <= 4
+        game.week == week and target in (game.home_team, game.away_team)
         for game in games
     )
     return not has_game_this_week

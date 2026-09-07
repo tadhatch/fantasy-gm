@@ -634,18 +634,23 @@ def worker_lineup(
     def slot_name(slot_id: int) -> str:
         return LINEUP_SLOT_IDS.get(slot_id, str(slot_id))
 
+    def total_str(player_id: int) -> str:
+        candidate = plan.candidates.get(player_id)
+        return f"{candidate.projected_points:.1f}" if candidate else "?"
+
     def score_breakdown(player_id: int) -> str:
         candidate = plan.candidates.get(player_id)
         if candidate is None:
             return "?"
-        raw = (
-            f"{candidate.raw_projection:.1f}"
-            if candidate.raw_projection is not None
-            else "—"
-        )
+        # Back-computed from projected_points rather than showing
+        # raw_projection directly: when a player is unavailable
+        # (bye/no data), the base actually used is 0.0, not their raw
+        # ESPN number — showing the unused raw figure here would look
+        # like it contributed when it didn't.
+        base_used = candidate.projected_points - candidate.evaluation_delta
         delta = candidate.evaluation_delta
         delta_str = f"{delta:+.1f}" if delta else "+0.0"
-        return f"{candidate.projected_points:.1f} ({raw} espn {delta_str} eval)"
+        return f"{base_used:.1f} espn {delta_str} eval"
 
     if not plan.moves:
         console.print(
@@ -656,6 +661,7 @@ def worker_lineup(
         table.add_column("Player")
         table.add_column("From")
         table.add_column("To")
+        table.add_column("Total")
         table.add_column("Score (espn + eval)")
         for move in plan.moves:
             candidate = plan.candidates.get(move.player_id)
@@ -664,6 +670,7 @@ def worker_lineup(
                 name,
                 slot_name(move.from_slot_id),
                 slot_name(move.to_slot_id),
+                total_str(move.player_id),
                 score_breakdown(move.player_id),
             )
         console.print(table)
@@ -671,6 +678,7 @@ def worker_lineup(
     board = Table(title="Full roster board")
     board.add_column("Player")
     board.add_column("Slot")
+    board.add_column("Total")
     board.add_column("Score (espn + eval)")
     board.add_column("Status")
     for candidate in sorted(
@@ -691,6 +699,7 @@ def worker_lineup(
         board.add_row(
             candidate.entry.name,
             slot_name(slot_id),
+            total_str(candidate.entry.player_id),
             score_breakdown(candidate.entry.player_id),
             status,
         )
