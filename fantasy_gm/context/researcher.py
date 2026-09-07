@@ -69,7 +69,7 @@ class OpenAIContextResearcher:
     ) -> AIContextResult:
         prompt = f"""
 Research {player_name}, position {position}, NFL team identifier/name {nfl_team},
-as of right now for a 2026 fantasy football draft.
+as of right now, for a fantasy football roster decision.
 
 Existing quantitative context:
 {json.dumps(quantitative_context, indent=2)}

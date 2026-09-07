@@ -12,8 +12,8 @@ from fantasy_gm.espn.roster import load_team_roster
 from fantasy_gm.models.roster import RosterEntry
 
 from .models import AIContextResult
+from .news_scan import run_news_scan
 from .postgres_store import PostgresContextStore
-from .router import ContextModelRouter
 from .service import ContextStoreLike
 
 # Positions worth spending a research call on. Matches what the draft
@@ -22,7 +22,7 @@ from .service import ContextStoreLike
 # and so never actually matches a defense — not repeating that here).
 EVALUATED_POSITIONS = {"QB", "RB", "WR", "TE", "K", "D/ST"}
 
-ProgressCallback = Callable[[int, int, BoardPlayer, str], None]
+ProgressCallback = Callable[[int, int], None]
 
 
 def build_roster_universe(
@@ -30,20 +30,57 @@ def build_roster_universe(
     *,
     team_id: int,
 ) -> list[BoardPlayer]:
-    """
-    Just our own roster. This worker's job is keeping our players' real-
-    world context fresh for lineup decisions — the player universe a
-    task needs depends on the task: waivers need free agents compared
-    against the roster (waiver/pipeline.py does its own screening of
-    those), trades need other teams' rosters compared against ours. A
-    single blanket "roster + top-owned players league-wide" universe
-    doesn't serve any of those well — it mostly wastes research calls on
-    players nobody here could actually add or is deciding about.
-    """
+    """Just our own roster — for consumers that only ever need that."""
     roster = load_team_roster(client, team_id)
     return [
         board_player_from_roster_entry(entry) for entry in roster.entries
     ]
+
+
+def build_evaluator_pool(
+    client: ESPNClient,
+    *,
+    team_id: int,
+    free_agent_pool_size: int = 50,
+) -> list[BoardPlayer]:
+    """
+    The Evaluator's own standing inventory: roster + top free agents.
+
+    This is broader than any one task needs (a lineup decision only
+    cares about the roster) because the point of the Evaluator is to be
+    the shared cache other workers read from instead of re-researching
+    players themselves — waivers need free agents compared against the
+    roster, so free agents need to already be in the inventory by the
+    time a waiver run looks for them.
+    """
+    candidates: dict[int, BoardPlayer] = {}
+
+    roster = load_team_roster(client, team_id)
+    for entry in roster.entries:
+        candidates[entry.player_id] = board_player_from_roster_entry(entry)
+
+    roster_count = len(candidates)
+
+    pool_data = client.get_player_pool(
+        limit=max(500, free_agent_pool_size * 4)
+    )
+    pool = (
+        pool_data.get("players", [])
+        if isinstance(pool_data, dict)
+        else pool_data
+    )
+
+    for entry in pool:
+        if len(candidates) - roster_count >= free_agent_pool_size:
+            break
+
+        candidate = board_player_from_pool_entry(entry)
+        if candidate is None or candidate.espn_id in candidates:
+            continue
+
+        candidates[candidate.espn_id] = candidate
+
+    return list(candidates.values())
 
 
 def board_player_from_roster_entry(entry: RosterEntry) -> BoardPlayer:
@@ -107,85 +144,57 @@ def evaluate_players(
     *,
     team_id: int,
     store: ContextStoreLike | None = None,
-    router: ContextModelRouter | None = None,
+    free_agent_pool_size: int = 50,
     freshness_hours: int = 24,
-    max_research_calls: int = 20,
-    max_deep_dives: int | None = None,
+    max_calls: int = 5,
     progress: ProgressCallback | None = None,
 ) -> list[AIContextResult]:
     """
-    Refresh real-world evaluations for the roster.
+    Refresh the off-field "feeling" signal for the roster + top free
+    agents, in a small, bounded number of calls rather than one call per
+    player. On-field, statistical signal (usage trends, etc.) is a
+    separate, purely computational concern this does not cover.
 
     This is the recurring counterpart to context.service.refresh_context
-    (which only ever covered the draft board): same research pipeline and
-    store, different — and ongoing, not one-shot — player universe. It's
-    meant to run on a schedule, so it's deliberately budget-capped rather
-    than trying to fully refresh everything every time; freshness
-    checking means most of that budget goes to genuinely stale or new
-    players once the cache has warmed up.
+    (which only ever covered the draft board): same store, an ongoing
+    rather than one-shot player universe, and now a broad-scan-plus-
+    escalation research strategy instead of per-player research calls —
+    most players most days have no off-field news at all, so researching
+    each individually spent nearly the whole budget on non-findings.
     """
     store = store or PostgresContextStore()
 
-    if router is None:
-        router = ContextModelRouter(
-            luna_model=os.getenv("FANTASY_GM_CONTEXT_MODEL", "gpt-5.6-luna"),
-            terra_model=os.getenv(
-                "FANTASY_GM_DEEP_DIVE_MODEL", "gpt-5.6-terra"
-            ),
-            threshold=float(
-                os.getenv("FANTASY_GM_DEEP_DIVE_THRESHOLD", "0.55")
-            ),
-        )
-
-    if max_deep_dives is None:
-        max_deep_dives = int(
-            os.getenv("FANTASY_GM_MAX_DEEP_DIVES_PER_REFRESH", "8")
-        )
-
-    universe = build_roster_universe(client, team_id=team_id)
+    universe = build_evaluator_pool(
+        client,
+        team_id=team_id,
+        free_agent_pool_size=free_agent_pool_size,
+    )
 
     existing = store.load_all()
-    refreshed: list[AIContextResult] = []
-    terra_used = 0
-    calls_made = 0
-
-    for player in universe:
-        if calls_made >= max_research_calls:
-            break
-
-        old = existing.get(player.espn_id)
-        if old and store.is_fresh(old, hours=freshness_hours):
-            if progress:
-                progress(calls_made, len(universe), player, "cached")
-            continue
-
-        quantitative_context = {
-            "position": player.position,
-            "injury_status_espn": player.injury_status,
-            "percent_owned": player.percent_owned,
-        }
-
-        routed = router.research(
-            player=player,
-            quantitative_context=quantitative_context,
-            allow_terra=terra_used < max_deep_dives,
+    stale = [
+        player
+        for player in universe
+        if not (
+            (old := existing.get(player.espn_id))
+            and store.is_fresh(old, hours=freshness_hours)
         )
+    ]
 
-        calls_made += 1
+    if progress:
+        progress(len(stale), len(universe))
 
-        if routed.terra is not None:
-            terra_used += 1
-            status = f"terra (deep={routed.escalation.score:.2f})"
-        else:
-            status = f"luna (deep={routed.escalation.score:.2f})"
+    results = run_news_scan(
+        stale,
+        broad_model=os.getenv("FANTASY_GM_CONTEXT_MODEL", "gpt-5.6-luna"),
+        deep_dive_model=os.getenv(
+            "FANTASY_GM_DEEP_DIVE_MODEL", "gpt-5.6-terra"
+        ),
+        max_calls=max_calls,
+    )
 
-        store.put(routed.final)
-        refreshed.append(routed.final)
+    store.put_many(results)
 
-        if progress:
-            progress(calls_made, len(universe), player, status)
-
-    return refreshed
+    return results
 
 
 def _float(value: object) -> float | None:

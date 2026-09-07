@@ -148,6 +148,15 @@ def run_waiver_pipeline(
             "position": p.position,
             "percent_owned": p.percent_owned,
             "injury_status": p.injury_status,
+            "recent_evaluation": (
+                {
+                    "delta": ctx.direct_delta,
+                    "confidence": ctx.confidence,
+                    "summary": ctx.summary,
+                }
+                if (ctx := cached_context.get(p.espn_id))
+                else None
+            ),
         }
         for p in pool
     ]

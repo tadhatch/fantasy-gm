@@ -252,7 +252,8 @@ class RailwayServiceManager:
     def launch_evaluation_worker(
         self,
         *,
-        max_calls: int = 20,
+        pool_size: int = 50,
+        max_calls: int = 5,
         freshness_hours: int = 24,
     ) -> RailwayService:
         job_id = uuid.uuid4().hex[:8]
@@ -260,6 +261,7 @@ class RailwayServiceManager:
             name=f"worker-evaluate-{job_id}",
             start_command=(
                 "fantasy-gm worker evaluate "
+                f"--pool-size {pool_size} "
                 f"--max-calls {max_calls} "
                 f"--freshness-hours {freshness_hours}"
             ),

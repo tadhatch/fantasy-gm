@@ -457,37 +457,47 @@ def worker_evaluate(
         "--team-id",
         help="Defaults to your configured team",
     ),
+    pool_size: int = typer.Option(
+        50,
+        "--pool-size",
+        help="Top-owned free agents to keep in the shared inventory alongside the roster",
+    ),
     max_calls: int = typer.Option(
-        20,
+        5,
         "--max-calls",
-        help="Research call budget for this run (real OpenAI API cost)",
+        help="Broad-scan + escalation call budget for this run (real OpenAI API cost)",
     ),
     freshness_hours: int = typer.Option(
         24,
         "--freshness-hours",
-        help="Skip players researched more recently than this",
+        help="Skip players evaluated more recently than this",
     ),
 ) -> None:
     """
-    Refresh real-world evaluations (injury/role/news) for the roster,
-    storing results in Postgres for lineup decisions to read. Free
-    agents and other rosters are each task's own concern (see
-    `worker waiver`, which does its own free-agent screening), not this
-    worker's — it only ever looks at players we actually own. Makes
-    real OpenAI API calls with web search.
+    Refresh the off-field "feeling" signal (injury/contract/news/
+    distraction) for the roster + top free agents, storing results in
+    Postgres as the shared inventory other workers (lineup, waiver,
+    trade) read instead of researching players themselves. One broad
+    web-search scan across the whole pool, escalating to a real
+    per-player deep dive only for whatever it flags as significant or
+    unclear — not one call per player. Makes real OpenAI API calls.
     """
     from fantasy_gm.context.evaluation_worker import evaluate_players
 
     settings = get_settings()
     client = ESPNClient(settings)
 
-    def progress(i: int, total: int, player, status: str) -> None:
-        console.print(f"[{i:>3}/{total}] {status:>20}  {player.name}")
+    def progress(stale_count: int, total: int) -> None:
+        console.print(
+            f"Scanning {stale_count}/{total} players "
+            "not already freshly evaluated..."
+        )
 
     results = evaluate_players(
         client,
         team_id=team_id or settings.espn_team_id,
-        max_research_calls=max_calls,
+        free_agent_pool_size=pool_size,
+        max_calls=max_calls,
         freshness_hours=freshness_hours,
         progress=progress,
     )

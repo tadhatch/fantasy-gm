@@ -144,13 +144,15 @@ def _evaluation_due(interval_hours: float) -> bool:
 
 
 def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
-    max_calls = int(os.getenv("FANTASY_GM_EVALUATION_MAX_CALLS", "20"))
+    pool_size = int(os.getenv("FANTASY_GM_EVALUATION_POOL_SIZE", "50"))
+    max_calls = int(os.getenv("FANTASY_GM_EVALUATION_MAX_CALLS", "5"))
     freshness_hours = int(
         os.getenv("FANTASY_GM_EVALUATION_FRESHNESS_HOURS", "24")
     )
 
     try:
         worker = service_manager.launch_evaluation_worker(
+            pool_size=pool_size,
             max_calls=max_calls,
             freshness_hours=freshness_hours,
         )
@@ -162,9 +164,10 @@ def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
 
         # Rough estimate only — deployment_stopped is the real completion
         # signal; this just sets wait_and_delete's safety-net ceiling.
-        # Web-search research calls (and occasional terra escalations)
-        # are slow and variable, so this errs generous.
-        expected_runtime_seconds = max_calls * 30
+        # The first call alone is a broad web-search scan across the
+        # whole pool, which can take a while by itself; escalations add
+        # more on top. Errs generous.
+        expected_runtime_seconds = max(300, max_calls * 60)
 
         cleanup_thread = threading.Thread(
             target=service_manager.wait_and_delete,
