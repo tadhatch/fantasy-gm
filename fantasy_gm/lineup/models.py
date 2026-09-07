@@ -19,6 +19,13 @@ class LineupCandidate:
     # otherwise prefer, so they're pinned to their current slot rather
     # than considered for reassignment at all.
     locked: bool = False
+    # The two components projected_points is actually made of, kept
+    # separately so a consumer can show *why* a decision was made, not
+    # just what it was — raw_projection is ESPN's weekly number
+    # (pre-injury-discount), evaluation_delta is whatever the cached
+    # real-world evaluation contributed on top.
+    raw_projection: float | None = None
+    evaluation_delta: float = 0.0
 
 
 @dataclass(slots=True)
@@ -27,4 +34,5 @@ class LineupPlan:
     assignments: dict[int, int]
     bench_player_ids: list[int]
     unfilled_slots: dict[int, int]
+    candidates: dict[int, LineupCandidate] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)

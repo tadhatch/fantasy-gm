@@ -162,6 +162,41 @@ def is_team_locked(
     return now >= kickoff
 
 
+def is_team_on_bye(
+    season: int,
+    espn_pro_team_id: int | None,
+    *,
+    now: datetime,
+) -> bool | None:
+    """
+    True if this team has no game in the current week's window (a real
+    bye, confirmed against the schedule), False if it does, None if this
+    can't be determined at all (unmapped team or the schedule itself
+    failed to load) — callers should fall back to another signal rather
+    than assume either way when this is None, since it's genuinely
+    unknown, not "not on bye".
+    """
+    if espn_pro_team_id is None:
+        return None
+
+    espn_abbr = PRO_TEAM_ABBR.get(espn_pro_team_id)
+    if espn_abbr is None:
+        return None
+
+    games = load_season_games(season)
+    if not games:
+        return None
+
+    target = ESPN_TO_NFLVERSE_ABBR.get(espn_abbr, espn_abbr)
+
+    has_game_this_week = any(
+        target in (game.home_team, game.away_team)
+        and abs((game.kickoff - now).days) <= 4
+        for game in games
+    )
+    return not has_game_this_week
+
+
 def _detect_and_record_changes(
     season: int, games: list[ScheduledGame]
 ) -> None:

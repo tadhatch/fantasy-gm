@@ -631,20 +631,70 @@ def worker_lineup(
 
     console.print(f"[bold]Week {resolved_week} lineup plan[/bold]")
 
+    def slot_name(slot_id: int) -> str:
+        return LINEUP_SLOT_IDS.get(slot_id, str(slot_id))
+
+    def score_breakdown(player_id: int) -> str:
+        candidate = plan.candidates.get(player_id)
+        if candidate is None:
+            return "?"
+        raw = (
+            f"{candidate.raw_projection:.1f}"
+            if candidate.raw_projection is not None
+            else "—"
+        )
+        delta = candidate.evaluation_delta
+        delta_str = f"{delta:+.1f}" if delta else "+0.0"
+        return f"{candidate.projected_points:.1f} ({raw} espn {delta_str} eval)"
+
     if not plan.moves:
-        console.print("[green]Lineup is already optimal — no moves needed.[/green]")
+        console.print(
+            "[green]Lineup is already optimal — no moves needed.[/green]"
+        )
     else:
-        table = Table(title="Proposed moves")
+        table = Table(title="Proposed moves — why each one happened")
         table.add_column("Player")
         table.add_column("From")
         table.add_column("To")
+        table.add_column("Score (espn + eval)")
         for move in plan.moves:
+            candidate = plan.candidates.get(move.player_id)
+            name = candidate.entry.name if candidate else str(move.player_id)
             table.add_row(
-                str(move.player_id),
-                LINEUP_SLOT_IDS.get(move.from_slot_id, str(move.from_slot_id)),
-                LINEUP_SLOT_IDS.get(move.to_slot_id, str(move.to_slot_id)),
+                name,
+                slot_name(move.from_slot_id),
+                slot_name(move.to_slot_id),
+                score_breakdown(move.player_id),
             )
         console.print(table)
+
+    board = Table(title="Full roster board")
+    board.add_column("Player")
+    board.add_column("Slot")
+    board.add_column("Score (espn + eval)")
+    board.add_column("Status")
+    for candidate in sorted(
+        plan.candidates.values(),
+        key=lambda c: c.projected_points,
+        reverse=True,
+    ):
+        slot_id = plan.assignments.get(
+            candidate.entry.player_id, candidate.entry.lineup_slot_id
+        )
+        status_bits = []
+        if candidate.locked:
+            status_bits.append("locked")
+        if candidate.unavailable_reason:
+            status_bits.append(candidate.unavailable_reason)
+        status = ", ".join(status_bits) if status_bits else "ok"
+
+        board.add_row(
+            candidate.entry.name,
+            slot_name(slot_id),
+            score_breakdown(candidate.entry.player_id),
+            status,
+        )
+    console.print(board)
 
     for note in plan.notes:
         console.print(f"[yellow]note:[/yellow] {note}")

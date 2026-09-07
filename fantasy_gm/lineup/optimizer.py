@@ -153,5 +153,6 @@ def optimize_lineup(
         assignments=assignments,
         bench_player_ids=bench_player_ids,
         unfilled_slots=unfilled,
+        candidates=working,
         notes=notes,
     )
