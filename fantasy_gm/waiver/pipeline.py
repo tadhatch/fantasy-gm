@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+from dataclasses import asdict
 
 from fantasy_gm.context.evaluation_worker import board_player_from_pool_entry
 from fantasy_gm.context.postgres_store import PostgresContextStore
@@ -25,6 +27,8 @@ from .models import (
 )
 from .store import WaiverDecisionStore
 
+
+logger = logging.getLogger(__name__)
 
 ROSTER_SYSTEM = """
 You are the roster analyst for an autonomous fantasy football GM.
@@ -185,7 +189,7 @@ def run_waiver_pipeline(
         ),
         user=(
             f"Roster analysis:\n{json.dumps(_analysis_payload(roster_analysis), indent=2)}\n\n"
-            f"Shortlisted free agents:\n{json.dumps([s.__dict__ for s in shortlist], indent=2)}\n\n"
+            f"Shortlisted free agents:\n{json.dumps([asdict(s) for s in shortlist], indent=2)}\n\n"
             "Return JSON:\n"
             "{\n"
             '  "candidate_moves": [{"add_espn_id": int, "add_name": str, '
@@ -225,7 +229,7 @@ def run_waiver_pipeline(
         system=GM_DECISION_SYSTEM,
         user=(
             "Candidate moves from the reasoning stage:\n"
-            f"{json.dumps([m.__dict__ for m in candidate_moves], indent=2)}\n\n"
+            f"{json.dumps([asdict(m) for m in candidate_moves], indent=2)}\n\n"
             "Fresh deep-dive research (if any):\n"
             f"{json.dumps(_deep_dive_payload(deep_dive_results), indent=2)}\n\n"
             "Return JSON:\n"
@@ -280,6 +284,14 @@ def run_waiver_pipeline(
     )
 
     decision_store.record(team_id=team_id, result=result)
+
+    try:
+        from fantasy_gm.railway.task_runs import TaskRunStore
+
+        TaskRunStore().mark_run("waiver")
+    except Exception:
+        # Bookkeeping only — never block a real waiver decision on it.
+        logger.exception("waiver: failed to record task run")
 
     return result
 
@@ -377,7 +389,9 @@ def _analysis_payload(analysis: RosterAnalysis) -> dict:
         "strengths": analysis.strengths,
         "weaknesses": analysis.weaknesses,
         "positional_needs": analysis.positional_needs,
-        "expendable_players": [e.__dict__ for e in analysis.expendable_players],
+        "expendable_players": [
+            asdict(e) for e in analysis.expendable_players
+        ],
         "summary": analysis.summary,
     }
 
