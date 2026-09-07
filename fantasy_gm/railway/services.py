@@ -9,9 +9,16 @@ import uuid
 from rich.console import Console
 
 from fantasy_gm.railway.client import RailwayClient, RailwayService
+from fantasy_gm.railway.version_store import ServiceVersionStore
 
 
 console = Console()
+
+# Bump this whenever the chatbot's provisioning changes in a way that
+# only takes effect at service-creation time (a new required variable,
+# a different start command) — ensure_chatbot() recreates the service
+# from scratch instead of leaving an existing one stale.
+CHATBOT_VERSION = os.getenv("FANTASY_GM_CHATBOT_VERSION", "1")
 
 SHARED_VARIABLES = [
     "ESPN_LEAGUE_ID",
@@ -148,89 +155,64 @@ class RailwayServiceManager:
         return deleted
 
     def ensure_chatbot(self) -> RailwayService:
+        """
+        Ensure the chatbot service exists and is on the expected
+        provisioning version.
+
+        A redeploy alone only picks up new code — the shared variables,
+        DATABASE_URL, and start command are only ever applied at
+        creation time, so an already-existing service never gets those
+        touched again on its own. CHATBOT_VERSION is a manual bump: when
+        provisioning itself needs to change (a new required variable, a
+        different start command), bump it and this recreates the
+        service from scratch instead of leaving it stale.
+        """
         name = os.getenv(
             "FANTASY_GM_CHATBOT_SERVICE",
             "chatbot",
         )
 
+        version_store = ServiceVersionStore()
+        deployed_version = version_store.get(name)
+
         service = self.client.find_service(name)
 
         if service is not None:
+            if deployed_version == CHATBOT_VERSION:
+                console.print(
+                    f"[green][CHATBOT][/green] "
+                    f"service exists: {service.name} "
+                    f"status={service.deployment_status} "
+                    f"version={deployed_version}"
+                )
+                return service
+
             console.print(
-                f"[green][CHATBOT][/green] "
-                f"service exists: {service.name} "
-                f"status={service.deployment_status}"
+                f"[yellow][CHATBOT][/yellow] "
+                f"service exists but provisioning is stale "
+                f"(deployed={deployed_version!r}, "
+                f"expected={CHATBOT_VERSION!r}); recreating"
             )
-            return service
+            self.client.delete_service(service.id)
+        else:
+            console.print(
+                f"[yellow][CHATBOT][/yellow] "
+                f"service missing; creating {name}"
+            )
 
-        console.print(
-            f"[yellow][CHATBOT][/yellow] "
-            f"service missing; creating {name}"
-        )
-
-        service = self.client.create_service(
+        service = self._launch_disposable_worker(
             name=name,
-            repo=self.repo,
-        )
-
-        console.print(
-            f"[cyan][CHATBOT][/cyan] "
-            f"created service id={service.id}"
+            start_command="fantasy-gm chatbot run",
+            restart_policy="ON_FAILURE",
         )
 
         try:
-            console.print(
-                f"[cyan][CHATBOT][/cyan] "
-                "attaching shared variables"
-            )
-
-            self.client.attach_shared_variables(
-                service_id=service.id,
-                variable_names=SHARED_VARIABLES,
-            )
-
-            console.print(
-                f"[green][CHATBOT][/green] "
-                f"attached {len(SHARED_VARIABLES)} shared variables"
-            )
-
-            self.client.set_variable(
-                service_id=service.id,
-                name="DATABASE_URL",
-                value=DATABASE_URL_REFERENCE,
-            )
-
-            console.print(
-                f"[green][CHATBOT][/green] "
-                f"attached DATABASE_URL ({DATABASE_URL_REFERENCE})"
-            )
-
-            self.client.configure_service(
-                service_id=service.id,
-                start_command="fantasy-gm chatbot run",
-                restart_policy="ON_FAILURE",
-            )
-
-            console.print(
-                "[cyan][CHATBOT][/cyan] "
-                "configured start command and restart policy"
-            )
-
-            deployment_id = self.client.deploy_service(service.id)
-
-            console.print(
-                f"[green][CHATBOT][/green] "
-                f"deployment requested id={deployment_id}"
-            )
-
-        except Exception:
+            version_store.set(name, CHATBOT_VERSION)
+        except Exception as exc:
             console.print(
                 f"[bold red][CHATBOT][/bold red] "
-                f"provisioning failed after creation for {name}; "
-                "it would otherwise deploy with no start command"
+                f"failed to record deployed version: {exc!r}"
             )
-            self._try_delete_orphan(service.id, name, label="CHATBOT")
-            raise
 
         return service
 
