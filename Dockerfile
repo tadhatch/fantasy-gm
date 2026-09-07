@@ -20,5 +20,9 @@ RUN pip install --upgrade pip \
 # Run the CLI by default.
 ENTRYPOINT ["fantasy-gm"]
 
+# Drop privileges to a non-root user for security.
+RUN groupadd -r fantasygm && useradd -r -g fantasygm fantasygm
+USER fantasygm
+
 # `docker compose run fantasy-gm` with no args will show help.
 CMD ["run"]
