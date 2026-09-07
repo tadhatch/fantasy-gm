@@ -87,6 +87,14 @@ class DraftPickContext:
 
 
 @dataclass(slots=True)
+class PlayerNewsItem:
+    player_name: str
+    summary: str
+    direct_delta: float
+    category: str
+
+
+@dataclass(slots=True)
 class ChatbotDraftState:
     our_team_id: int
     our_team_name: str = "the reservists"
@@ -95,6 +103,7 @@ class ChatbotDraftState:
     current_team_id: int | None = None
     our_roster: list[str] = field(default_factory=list)
     recent_picks: list[DraftPickContext] = field(default_factory=list)
+    notable_player_news: list[PlayerNewsItem] = field(default_factory=list)
 
 
 @dataclass(slots=True)

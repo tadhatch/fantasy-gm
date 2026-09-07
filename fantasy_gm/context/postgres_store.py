@@ -89,6 +89,40 @@ class PostgresContextStore:
 
         return row["latest"] if row else None
 
+    def notable_recent(
+        self,
+        *,
+        hours: int = 48,
+        limit: int = 8,
+        min_abs_delta: float = 2.0,
+    ) -> list[AIContextResult]:
+        """
+        The handful of evaluations from the last `hours` worth actually
+        surfacing somewhere like chat — recent and a large enough delta
+        (either direction) to be worth mentioning, biggest impact first.
+        Not the whole cache: most players most days have nothing notable
+        and shouldn't show up here.
+        """
+        all_recent = self.load_all()
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+        notable = []
+        for result in all_recent.values():
+            if abs(result.direct_delta) < min_abs_delta:
+                continue
+            try:
+                researched = datetime.fromisoformat(
+                    result.researched_at.replace("Z", "+00:00")
+                )
+            except ValueError:
+                continue
+            if researched < cutoff:
+                continue
+            notable.append(result)
+
+        notable.sort(key=lambda r: abs(r.direct_delta), reverse=True)
+        return notable[:limit]
+
     def get(self, espn_id: int) -> AIContextResult | None:
         query = """
             SELECT *

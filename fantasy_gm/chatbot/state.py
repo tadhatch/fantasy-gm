@@ -8,7 +8,7 @@ from fantasy_gm.espn.draft import load_draft_picks
 from fantasy_gm.espn.league import load_league_summary
 from fantasy_gm.espn.players import load_players
 
-from .models import ChatbotDraftState, DraftPickContext
+from .models import ChatbotDraftState, DraftPickContext, PlayerNewsItem
 
 
 logger = logging.getLogger(__name__)
@@ -106,6 +106,28 @@ class DraftStateProvider:
             current_team_id=current_team_id,
             our_roster=our_roster,
             recent_picks=recent,
+            notable_player_news=self._load_notable_player_news(),
         )
         self._last_refresh = now
         return self._state
+
+    def _load_notable_player_news(self) -> list[PlayerNewsItem]:
+        try:
+            from fantasy_gm.context.postgres_store import (
+                PostgresContextStore,
+            )
+
+            notable = PostgresContextStore().notable_recent()
+        except Exception:
+            logger.exception("chat: unable to load notable player news")
+            return []
+
+        return [
+            PlayerNewsItem(
+                player_name=result.player_name,
+                summary=result.summary,
+                direct_delta=result.direct_delta,
+                category=result.category,
+            )
+            for result in notable
+        ]

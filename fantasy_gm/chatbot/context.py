@@ -50,6 +50,15 @@ class ChatContext:
                     f"(team {pick.team_id})"
                 )
 
+        if draft_state.notable_player_news:
+            lines.extend(["", "notable recent player news:"])
+            for item in draft_state.notable_player_news:
+                lines.append(
+                    f"- {item.player_name} "
+                    f"({item.category}, impact {item.direct_delta:+.1f}): "
+                    f"{item.summary}"
+                )
+
         if self.recent_chat:
             lines.extend(["", "recent league chat:"])
             for message in self.recent_chat:
