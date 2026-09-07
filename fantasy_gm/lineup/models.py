@@ -14,6 +14,11 @@ class LineupCandidate:
     projected_points: float
     available: bool
     unavailable_reason: str | None = None
+    # Their NFL team's game has already kicked off — ESPN won't let this
+    # player's slot change regardless of what the optimizer would
+    # otherwise prefer, so they're pinned to their current slot rather
+    # than considered for reassignment at all.
+    locked: bool = False
 
 
 @dataclass(slots=True)

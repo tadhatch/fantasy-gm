@@ -40,6 +40,11 @@ def optimize_lineup(
     started rather than leaving the slot's current occupant benched with
     no replacement — ESPN doesn't allow a required slot to go empty when
     an eligible rostered player exists, and neither should this.
+
+    Locked players (candidate.locked — their game already kicked off)
+    are pinned to their current slot before any of this runs and never
+    reconsidered: ESPN won't let their slot change regardless of what
+    the optimizer would otherwise prefer.
     """
     working = {c.entry.player_id: c for c in candidates}
     remaining_ids = set(working)
@@ -48,15 +53,37 @@ def optimize_lineup(
     notes: list[str] = []
     unfilled: dict[int, int] = {}
 
-    fill_order = [s for s in DEFAULT_FILL_ORDER if s in slot_counts]
+    # Locked players (their game already kicked off) can't be moved at
+    # all — pin them to whatever slot they're already in and remove them
+    # from consideration entirely, including reducing however many of
+    # that slot are still needed, so the fill loop below doesn't try to
+    # double-fill a slot a locked player already validly occupies.
+    effective_slot_counts = dict(slot_counts)
+    for pid in list(remaining_ids):
+        candidate = working[pid]
+        if not candidate.locked:
+            continue
+
+        current_slot = candidate.entry.lineup_slot_id
+        assignments[pid] = current_slot
+        remaining_ids.discard(pid)
+
+        if current_slot in effective_slot_counts:
+            effective_slot_counts[current_slot] = max(
+                0, effective_slot_counts[current_slot] - 1
+            )
+
+    fill_order = [
+        s for s in DEFAULT_FILL_ORDER if s in effective_slot_counts
+    ]
     fill_order += [
         s
-        for s in slot_counts
+        for s in effective_slot_counts
         if s not in fill_order and s not in (BENCH_SLOT_ID, IR_SLOT_ID)
     ]
 
     for slot_id in fill_order:
-        count = slot_counts.get(slot_id, 0)
+        count = effective_slot_counts.get(slot_id, 0)
         if count <= 0:
             continue
 

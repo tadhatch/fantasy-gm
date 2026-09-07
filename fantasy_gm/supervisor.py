@@ -4,12 +4,12 @@ import os
 import time
 import threading
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 
 from rich.console import Console
 
 from fantasy_gm.espn.client import ESPNClient
 from fantasy_gm.espn.league import load_league_summary
+from fantasy_gm.nfl_schedule import NFL_TZ, load_season_games
 from fantasy_gm.railway.services import (
     RailwayServiceManager,
     has_actually_finished,
@@ -21,16 +21,8 @@ console = Console()
 EVALUATION_WORKER_PREFIX = "worker-evaluate-"
 LINEUP_WORKER_PREFIX = "worker-lineup-"
 
-NFL_TZ = ZoneInfo("America/New_York")
-
 # How long before a wave of kickoffs the lineup should already be set.
 LINEUP_CHECKPOINT_BUFFER_MINUTES = 75
-
-# Re-fetch the season schedule at most this often — it rarely changes
-# (mainly late-season flex scheduling), and this runs on every poll
-# cycle otherwise.
-_SCHEDULE_CACHE_TTL_SECONDS = 6 * 3600
-_schedule_cache: dict[int, tuple[float, list[datetime]]] = {}
 
 
 def _poll_seconds() -> int:
@@ -236,60 +228,25 @@ def _lineup_enabled() -> bool:
     )
 
 
-def _season_kickoffs(season: int) -> list[datetime]:
-    """
-    Actual NFL kickoff times for the season, from nflverse's published
-    schedule — the real schedule spans most weekdays in a given season
-    (international windows, Thanksgiving/Black Friday/Christmas games,
-    late-season flex moves), so a fixed weekly shape doesn't hold up.
-    Best-effort: nflreadpy's schedule column names/formats haven't been
-    verified against a live run, so a parse failure here just drops
-    that row rather than crashing the supervisor.
-    """
-    cached = _schedule_cache.get(season)
-    now_ts = time.monotonic()
-    if cached and now_ts - cached[0] < _SCHEDULE_CACHE_TTL_SECONDS:
-        return cached[1]
-
-    kickoffs: list[datetime] = []
-    try:
-        import nflreadpy as nfl
-
-        schedule = nfl.load_schedules([season])
-        for row in schedule.to_dicts():
-            gameday = row.get("gameday")
-            gametime = row.get("gametime")
-            if not gameday or not gametime:
-                continue
-            try:
-                kickoff = datetime.strptime(
-                    f"{gameday} {gametime}", "%Y-%m-%d %H:%M"
-                ).replace(tzinfo=NFL_TZ)
-            except ValueError:
-                continue
-            kickoffs.append(kickoff)
-    except Exception as exc:
-        console.print(
-            f"[red]Failed to load NFL schedule for lineup "
-            f"checkpoints: {exc!r}[/red]"
-        )
-        if cached:
-            return cached[1]  # stale beats nothing
-
-    _schedule_cache[season] = (now_ts, kickoffs)
-    return kickoffs
-
-
 def _most_recent_lineup_checkpoint(
     now: datetime, *, season: int
 ) -> datetime | None:
     now_local = now.astimezone(NFL_TZ)
     buffer = timedelta(minutes=LINEUP_CHECKPOINT_BUFFER_MINUTES)
 
+    try:
+        games = load_season_games(season)
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to load NFL schedule for lineup "
+            f"checkpoints: {exc!r}[/red]"
+        )
+        return None
+
     passed = [
-        kickoff - buffer
-        for kickoff in _season_kickoffs(season)
-        if kickoff - buffer <= now_local
+        game.kickoff - buffer
+        for game in games
+        if game.kickoff - buffer <= now_local
     ]
 
     return max(passed) if passed else None

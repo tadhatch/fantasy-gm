@@ -41,6 +41,7 @@ def load_all_rosters(client: ESPNClient) -> dict[int, TeamRoster]:
                     lineup_slot_id=entry.get("lineupSlotId", -1),
                     eligible_slot_ids=player.get("eligibleSlots", []),
                     default_position_id=player.get("defaultPositionId"),
+                    pro_team_id=player.get("proTeamId"),
                     injury_status=player.get("injuryStatus")
                     or pool_entry.get("injuryStatus"),
                     acquisition_type=entry.get("acquisitionType"),

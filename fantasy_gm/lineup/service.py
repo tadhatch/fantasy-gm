@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from fantasy_gm.context.postgres_store import PostgresContextStore
 from fantasy_gm.espn.client import ESPNClient
@@ -13,6 +14,7 @@ from fantasy_gm.espn.roster import (
 )
 from fantasy_gm.espn.transactions import ESPNTransactionsClient
 from fantasy_gm.models.roster import RosterEntry
+from fantasy_gm.nfl_schedule import is_team_locked
 from fantasy_gm.valuation.projections import extract_week_projection
 
 from .models import LineupCandidate, LineupPlan
@@ -43,6 +45,7 @@ def build_lineup_plan(
         client, roster.entries, week=week
     )
     cached_context = PostgresContextStore().load_all()
+    now = datetime.now(timezone.utc)
 
     candidates: list[LineupCandidate] = []
     for entry in roster.entries:
@@ -55,12 +58,17 @@ def build_lineup_plan(
         if ctx is not None:
             adjusted += ctx.weighted_delta()
 
+        locked = is_team_locked(
+            client.settings.espn_season, entry.pro_team_id, now=now
+        )
+
         candidates.append(
             LineupCandidate(
                 entry=entry,
                 projected_points=adjusted,
                 available=available,
                 unavailable_reason=reason,
+                locked=locked,
             )
         )
 

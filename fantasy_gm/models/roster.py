@@ -7,6 +7,7 @@ class RosterEntry(BaseModel):
     lineup_slot_id: int
     eligible_slot_ids: list[int] = []
     default_position_id: int | None = None
+    pro_team_id: int | None = None
     injury_status: str | None = None
     acquisition_type: str | None = None
 
