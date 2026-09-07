@@ -11,18 +11,13 @@ class ESPNProjection:
     source: str
 
 
-def extract_season_projection(entry: dict[str, Any], season: int) -> ESPNProjection | None:
+def _collect_stat_rows(entry: dict[str, Any]) -> list[dict[str, Any]]:
     """
-    Extract ESPN's league-context season projection.
-
-    ESPN has used slightly different nesting/field names across fantasy views,
-    so this intentionally accepts:
+    ESPN has used slightly different nesting/field names across fantasy
+    views, so this intentionally accepts stats nested under any of:
       entry.player.stats
       entry.playerPoolEntry.stats
       entry.stats
-
-    A projection row is identified by statSourceId/statTypeId == 1, seasonId
-    matching our season, and preferably scoringPeriodId == 0.
     """
     candidates: list[dict[str, Any]] = []
 
@@ -33,6 +28,19 @@ def extract_season_projection(entry: dict[str, Any], season: int) -> ESPNProject
         stats = container.get("stats")
         if isinstance(stats, list):
             candidates.extend(s for s in stats if isinstance(s, dict))
+
+    return candidates
+
+
+def extract_season_projection(entry: dict[str, Any], season: int) -> ESPNProjection | None:
+    """
+    Extract ESPN's league-context season projection.
+
+    A projection row is identified by statSourceId/statTypeId == 1, seasonId
+    matching our season, and preferably scoringPeriodId == 0.
+    """
+    pool = entry.get("playerPoolEntry") or {}
+    candidates = _collect_stat_rows(entry)
 
     projected: list[dict[str, Any]] = []
     for stat in candidates:
@@ -76,3 +84,30 @@ def extract_season_projection(entry: dict[str, Any], season: int) -> ESPNProject
         raw_stats=raw_stats,
         source="espn_league_projection",
     )
+
+
+def extract_week_projection(
+    entry: dict[str, Any], *, season: int, week: int
+) -> float | None:
+    """
+    Same idea as extract_season_projection but for a single scoring
+    period (an actual week) instead of the whole-season total
+    (scoringPeriodId == 0) — what a lineup decision actually needs.
+    """
+    candidates = _collect_stat_rows(entry)
+
+    projected = [
+        s
+        for s in candidates
+        if s.get("seasonId") in (None, season)
+        and s.get("scoringPeriodId") == week
+        and (s.get("statSourceId") == 1 or s.get("statTypeId") == 1)
+    ]
+
+    if not projected:
+        return None
+
+    best = max(projected, key=lambda s: float(s.get("appliedTotal") or 0.0))
+    applied = best.get("appliedTotal")
+
+    return float(applied) if applied is not None else None

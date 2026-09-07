@@ -142,6 +142,37 @@ class ESPNClient:
             headers=headers,
         )
 
+    def get_players_by_id(
+        self,
+        player_ids: list[int],
+        *,
+        scoring_period_id: int = 0,
+    ) -> list[dict[str, Any]]:
+        """
+        Full stats-bearing player entries for exactly the given IDs —
+        for pulling projections for a known, specific set of players
+        (e.g. a roster) without gambling on whether they'd show up in
+        an ownership-sorted top-N pool (get_player_pool).
+        """
+        if not player_ids:
+            return []
+
+        fantasy_filter = {
+            "players": {
+                "filterIds": {"value": player_ids},
+            }
+        }
+        headers = {"X-Fantasy-Filter": json.dumps(fantasy_filter)}
+        data = self._get(
+            self.league_url,
+            params=[
+                ("view", "kona_player_info"),
+                ("scoringPeriodId", scoring_period_id),
+            ],
+            headers=headers,
+        )
+        return data.get("players", []) if isinstance(data, dict) else data
+
     def get_draft_security(
         self,
         *,

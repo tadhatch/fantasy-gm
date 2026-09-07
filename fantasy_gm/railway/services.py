@@ -249,6 +249,21 @@ class RailwayServiceManager:
             ),
         )
 
+    def launch_lineup_worker(
+        self,
+        *,
+        confirm: bool = False,
+    ) -> RailwayService:
+        job_id = uuid.uuid4().hex[:8]
+        start_command = "fantasy-gm worker lineup"
+        if confirm:
+            start_command += " --confirm"
+
+        return self._launch_disposable_worker(
+            name=f"worker-lineup-{job_id}",
+            start_command=start_command,
+        )
+
     def launch_waiver_worker(
         self,
         *,

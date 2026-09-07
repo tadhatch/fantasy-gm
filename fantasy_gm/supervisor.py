@@ -18,6 +18,7 @@ from fantasy_gm.railway.services import (
 console = Console()
 
 EVALUATION_WORKER_PREFIX = "worker-evaluate-"
+LINEUP_WORKER_PREFIX = "worker-lineup-"
 
 
 def _poll_seconds() -> int:
@@ -99,8 +100,8 @@ def _evaluation_enabled() -> bool:
     )
 
 
-def _evaluation_already_running(
-    service_manager: RailwayServiceManager,
+def _worker_already_running(
+    service_manager: RailwayServiceManager, prefix: str
 ) -> bool:
     try:
         services = service_manager.client.list_services()
@@ -116,10 +117,37 @@ def _evaluation_already_running(
     # this, a still-legitimately-deploying worker can look "not running"
     # and get double-dispatched.
     return any(
-        s.name.startswith(EVALUATION_WORKER_PREFIX)
-        and not has_actually_finished(s)
+        s.name.startswith(prefix) and not has_actually_finished(s)
         for s in services
     )
+
+
+def _task_due(task_name: str, interval_hours: float) -> bool:
+    """
+    Generic recurring-task scheduling check: has it been at least
+    `interval_hours` since this task last actually ran, per Postgres
+    (fantasy_gm.railway.task_runs.TaskRunStore) — not in-memory state,
+    which would reset (and could re-trigger unnecessarily) on every
+    supervisor restart.
+    """
+    from fantasy_gm.railway.task_runs import TaskRunStore
+
+    try:
+        last_run = TaskRunStore().last_run_at(task_name)
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to check {task_name} schedule: {exc!r}[/red]"
+        )
+        return False
+
+    if last_run is None:
+        return True
+
+    if last_run.tzinfo is None:
+        last_run = last_run.replace(tzinfo=timezone.utc)
+
+    elapsed = datetime.now(timezone.utc) - last_run
+    return elapsed.total_seconds() >= interval_hours * 3600
 
 
 def _evaluation_due(interval_hours: float) -> bool:
@@ -184,6 +212,54 @@ def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
         console.print(
             f"[bold red][WORKER][/bold red] "
             f"Failed to launch evaluation worker: {exc!r}"
+        )
+
+
+def _lineup_enabled() -> bool:
+    return (
+        os.getenv("FANTASY_GM_LINEUP_ENABLED", "true")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+
+
+def _dispatch_lineup_worker(service_manager: RailwayServiceManager) -> None:
+    confirm = (
+        os.getenv("FANTASY_GM_LINEUP_CONFIRM", "false")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+
+    try:
+        worker = service_manager.launch_lineup_worker(confirm=confirm)
+
+        console.print(
+            f"[cyan][WORKER][/cyan] "
+            f"Starting lifecycle monitor for {worker.name}"
+        )
+
+        # No LLM calls here, just a handful of ESPN reads and one
+        # transaction call — should be quick, but still generous since
+        # deployment_stopped remains the real completion signal.
+        expected_runtime_seconds = 120
+
+        cleanup_thread = threading.Thread(
+            target=service_manager.wait_and_delete,
+            args=(worker,),
+            kwargs={
+                "expected_runtime_seconds": expected_runtime_seconds
+            },
+            daemon=True,
+            name=f"cleanup-{worker.name}",
+        )
+        cleanup_thread.start()
+
+    except Exception as exc:
+        console.print(
+            f"[bold red][WORKER][/bold red] "
+            f"Failed to launch lineup worker: {exc!r}"
         )
 
 
@@ -292,7 +368,6 @@ def run_supervisor(client: ESPNClient) -> None:
             # - watch for upcoming draft activity
             # - dispatch the draft worker
             # - schedule waiver analysis
-            # - schedule lineup optimization
             # - detect incoming trades
 
             service_manager.log_services()
@@ -302,14 +377,29 @@ def run_supervisor(client: ESPNClient) -> None:
                 interval_hours = float(
                     os.getenv("FANTASY_GM_EVALUATION_INTERVAL_HOURS", "24")
                 )
-                if _evaluation_due(
-                    interval_hours
-                ) and not _evaluation_already_running(service_manager):
+                if _evaluation_due(interval_hours) and not _worker_already_running(
+                    service_manager, EVALUATION_WORKER_PREFIX
+                ):
                     console.print(
                         "[cyan][WORKER][/cyan] "
                         "player evaluation due; dispatching"
                     )
                     _dispatch_evaluation_worker(service_manager)
+
+            if _lineup_enabled():
+                lineup_interval_hours = float(
+                    os.getenv("FANTASY_GM_LINEUP_INTERVAL_HOURS", "12")
+                )
+                if _task_due(
+                    "lineup", lineup_interval_hours
+                ) and not _worker_already_running(
+                    service_manager, LINEUP_WORKER_PREFIX
+                ):
+                    console.print(
+                        "[cyan][WORKER][/cyan] "
+                        "lineup check due; dispatching"
+                    )
+                    _dispatch_lineup_worker(service_manager)
 
         except Exception as exc:
             console.print(

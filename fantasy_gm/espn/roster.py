@@ -88,3 +88,23 @@ def current_scoring_period(client: ESPNClient) -> int:
     raise RuntimeError(
         "Could not determine current scoring period from ESPN league status"
     )
+
+
+def load_roster_slot_counts(client: ESPNClient) -> dict[int, int]:
+    """
+    How many of each lineup slot this league actually starts (slot id ->
+    required count), from the league's own roster settings — e.g.
+    {0: 1, 2: 2, 4: 2, 6: 1, 23: 1, 16: 1, 17: 1, 20: 6, 21: 1} for a
+    standard 1QB/2RB/2WR/1TE/1FLEX/1DST/1K/6BE/1IR league. Slot ids match
+    espn.constants.LINEUP_SLOT_IDS.
+    """
+    data = client.get_league(["mSettings"])
+    settings = data.get("settings", {})
+    roster_settings = settings.get("rosterSettings", {})
+    slot_counts = roster_settings.get("lineupSlotCounts", {})
+
+    return {
+        int(slot_id): int(count)
+        for slot_id, count in slot_counts.items()
+        if int(count) > 0
+    }

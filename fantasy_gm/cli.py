@@ -11,7 +11,7 @@ from fantasy_gm.draft.watcher_live import watch_live_draft
 from fantasy_gm.draft.runner import DraftRunner, DraftRunnerConfig
 from fantasy_gm.draft.session import DraftSession
 from fantasy_gm.espn.client import ESPNClient
-from fantasy_gm.espn.constants import POSITION_IDS
+from fantasy_gm.espn.constants import LINEUP_SLOT_IDS, POSITION_IDS
 from fantasy_gm.espn.draft import load_draft_picks
 from fantasy_gm.espn.league import format_draft_time, load_league_summary
 from fantasy_gm.espn.players import load_players
@@ -589,4 +589,70 @@ def worker_waiver(
     console.print(
         f"[green]Calls used: {result.calls_used}. "
         f"Executed live: {result.executed}[/green]"
+    )
+
+
+@worker_app.command("lineup")
+def worker_lineup(
+    team_id: int | None = typer.Option(
+        None,
+        "--team-id",
+        help="Defaults to your configured team",
+    ),
+    week: int | None = typer.Option(
+        None,
+        "--week",
+        help="Defaults to the current scoring period",
+    ),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+) -> None:
+    """
+    Set the optimal starting lineup for the week: ESPN's own weekly
+    projections, discounted for injury status (OUT/IR/suspended players
+    never start over an available alternative), plus whatever real-world
+    evaluation is cached for each roster player. No web-search/LLM calls
+    of its own — it reads what the evaluation worker already produced.
+    """
+    from fantasy_gm.lineup.service import build_lineup_plan, submit_lineup_plan
+
+    settings = get_settings()
+    client = ESPNClient(settings)
+    resolved_team_id = team_id or settings.espn_team_id
+
+    plan, resolved_week = build_lineup_plan(
+        client,
+        team_id=resolved_team_id,
+        week=week,
+    )
+
+    console.print(f"[bold]Week {resolved_week} lineup plan[/bold]")
+
+    if not plan.moves:
+        console.print("[green]Lineup is already optimal — no moves needed.[/green]")
+    else:
+        table = Table(title="Proposed moves")
+        table.add_column("Player")
+        table.add_column("From")
+        table.add_column("To")
+        for move in plan.moves:
+            table.add_row(
+                str(move.player_id),
+                LINEUP_SLOT_IDS.get(move.from_slot_id, str(move.from_slot_id)),
+                LINEUP_SLOT_IDS.get(move.to_slot_id, str(move.to_slot_id)),
+            )
+        console.print(table)
+
+    for note in plan.notes:
+        console.print(f"[yellow]note:[/yellow] {note}")
+
+    submit_lineup_plan(
+        client,
+        team_id=resolved_team_id,
+        plan=plan,
+        week=resolved_week,
+        confirm=confirm,
     )
