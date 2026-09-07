@@ -20,6 +20,7 @@ console = Console()
 
 EVALUATION_WORKER_PREFIX = "worker-evaluate-"
 LINEUP_WORKER_PREFIX = "worker-lineup-"
+WAIVER_WORKER_PREFIX = "worker-waiver-"
 
 # How long before a wave of kickoffs the lineup should already be set.
 LINEUP_CHECKPOINT_BUFFER_MINUTES = 75
@@ -327,6 +328,57 @@ def _dispatch_lineup_worker(service_manager: RailwayServiceManager) -> None:
         )
 
 
+def _waiver_enabled() -> bool:
+    return (
+        os.getenv("FANTASY_GM_WAIVER_ENABLED", "true")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+
+
+def _dispatch_waiver_worker(service_manager: RailwayServiceManager) -> None:
+    pool_size = int(os.getenv("FANTASY_GM_WAIVER_POOL_SIZE", "60"))
+    shortlist_size = int(os.getenv("FANTASY_GM_WAIVER_SHORTLIST_SIZE", "15"))
+    deep_dive_budget = int(
+        os.getenv("FANTASY_GM_WAIVER_DEEP_DIVE_BUDGET", "3")
+    )
+
+    try:
+        worker = service_manager.launch_waiver_worker(
+            pool_size=pool_size,
+            shortlist_size=shortlist_size,
+            deep_dive_budget=deep_dive_budget,
+        )
+
+        console.print(
+            f"[cyan][WORKER][/cyan] "
+            f"Starting lifecycle monitor for {worker.name}"
+        )
+
+        # 4 core reasoning calls plus up to deep_dive_budget more —
+        # same shape as the evaluation worker's estimate, errs generous
+        # since deployment_stopped remains the real completion signal.
+        expected_runtime_seconds = max(300, (4 + deep_dive_budget) * 60)
+
+        cleanup_thread = threading.Thread(
+            target=service_manager.wait_and_delete,
+            args=(worker,),
+            kwargs={
+                "expected_runtime_seconds": expected_runtime_seconds
+            },
+            daemon=True,
+            name=f"cleanup-{worker.name}",
+        )
+        cleanup_thread.start()
+
+    except Exception as exc:
+        console.print(
+            f"[bold red][WORKER][/bold red] "
+            f"Failed to launch waiver worker: {exc!r}"
+        )
+
+
 def run_supervisor(client: ESPNClient) -> None:
     console.print(
         "[bold green]Fantasy GM supervisor started in GM mode[/bold green]"
@@ -431,7 +483,6 @@ def run_supervisor(client: ESPNClient) -> None:
             # Later this loop will also:
             # - watch for upcoming draft activity
             # - dispatch the draft worker
-            # - schedule waiver analysis
             # - detect incoming trades
 
             service_manager.log_services()
@@ -461,6 +512,21 @@ def run_supervisor(client: ESPNClient) -> None:
                         "lineup check due; dispatching"
                     )
                     _dispatch_lineup_worker(service_manager)
+
+            if _waiver_enabled():
+                interval_hours = float(
+                    os.getenv("FANTASY_GM_WAIVER_INTERVAL_HOURS", "24")
+                )
+                if _task_due(
+                    "waiver", interval_hours
+                ) and not _worker_already_running(
+                    service_manager, WAIVER_WORKER_PREFIX
+                ):
+                    console.print(
+                        "[cyan][WORKER][/cyan] "
+                        "waiver analysis due; dispatching"
+                    )
+                    _dispatch_waiver_worker(service_manager)
 
         except Exception as exc:
             console.print(
