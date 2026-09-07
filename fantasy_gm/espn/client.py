@@ -92,6 +92,13 @@ class ESPNClient:
             except (
                 requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout,
+                # Both are the connection dying mid-stream while reading
+                # the response body — requests doesn't classify either as
+                # a ConnectionError, so they were slipping past this
+                # retry entirely and crashing the whole command on what
+                # was just a transient network reset.
+                requests.exceptions.ChunkedEncodingError,
+                requests.exceptions.ContentDecodingError,
             ) as exc:
                 print(
                     f"ESPN request failed "
