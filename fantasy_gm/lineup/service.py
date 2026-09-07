@@ -15,7 +15,10 @@ from fantasy_gm.espn.roster import (
 from fantasy_gm.espn.transactions import ESPNTransactionsClient
 from fantasy_gm.models.roster import RosterEntry
 from fantasy_gm.nfl_schedule import is_team_locked, is_team_on_bye
-from fantasy_gm.valuation.projections import extract_week_projection
+from fantasy_gm.valuation.projections import (
+    extract_dst_week_projection,
+    extract_week_projection,
+)
 
 from .models import LineupCandidate, LineupPlan
 from .optimizer import optimize_lineup
@@ -118,6 +121,9 @@ def _load_weekly_projections(
     week: int,
 ) -> dict[int, float | None]:
     player_ids = [entry.player_id for entry in entries]
+    dst_ids = {
+        entry.player_id for entry in entries if entry.default_position_id == 16
+    }
     pool_entries = client.get_players_by_id(
         player_ids, scoring_period_id=week
     )
@@ -128,10 +134,16 @@ def _load_weekly_projections(
         espn_id = entry.get("id") or player.get("id")
         if espn_id is None:
             continue
+        espn_id = int(espn_id)
 
-        projections[int(espn_id)] = extract_week_projection(
-            entry, season=client.settings.espn_season, week=week
-        )
+        if espn_id in dst_ids:
+            projections[espn_id] = extract_dst_week_projection(
+                player, season=client.settings.espn_season, week=week
+            )
+        else:
+            projections[espn_id] = extract_week_projection(
+                entry, season=client.settings.espn_season, week=week
+            )
 
     return projections
 
@@ -151,7 +163,7 @@ def _evaluate_availability(
     if on_bye is True:
         return False, 0.0, "on bye this week"
 
-    if weekly_points is None or weekly_points <= 0:
+    if weekly_points is None:
         return False, 0.0, "no projection this week"
 
     status = (entry.injury_status or "").upper()

@@ -111,3 +111,35 @@ def extract_week_projection(
     applied = best.get("appliedTotal")
 
     return float(applied) if applied is not None else None
+
+
+def extract_dst_week_projection(
+    entry: dict[str, Any], *, season: int, week: int
+) -> float | None:
+    """
+    D/ST-specific counterpart to extract_week_projection: ESPN's own
+    appliedTotal is always 0.0 for a D/ST entry, projected or actual, so
+    it's reconstructed from the raw per-category stats instead (see
+    valuation/dst_scoring.py for how those categories were identified and
+    why the point values are a documented assumption, not a verified one).
+    """
+    from fantasy_gm.valuation.dst_scoring import estimate_dst_points
+
+    candidates = _collect_stat_rows(entry)
+    rows = [
+        s
+        for s in candidates
+        if s.get("seasonId") in (None, season) and s.get("scoringPeriodId") == week
+    ]
+    if not rows:
+        return None
+
+    # Prefer the real actual stat row once the game's been played;
+    # otherwise fall back to the projection row.
+    row = next((r for r in rows if r.get("statSourceId") == 0), None) or next(
+        (r for r in rows if r.get("statSourceId") == 1), None
+    )
+    if row is None:
+        return None
+
+    return estimate_dst_points(row.get("stats") or {})
