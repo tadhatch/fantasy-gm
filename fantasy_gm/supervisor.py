@@ -178,6 +178,7 @@ def _evaluation_due(interval_hours: float) -> bool:
 def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
     pool_size = int(os.getenv("FANTASY_GM_EVALUATION_POOL_SIZE", "50"))
     max_calls = int(os.getenv("FANTASY_GM_EVALUATION_MAX_CALLS", "5"))
+    dst_max_calls = int(os.getenv("FANTASY_GM_EVALUATION_DST_MAX_CALLS", "2"))
     freshness_hours = int(
         os.getenv("FANTASY_GM_EVALUATION_FRESHNESS_HOURS", "24")
     )
@@ -186,6 +187,7 @@ def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
         worker = service_manager.launch_evaluation_worker(
             pool_size=pool_size,
             max_calls=max_calls,
+            dst_max_calls=dst_max_calls,
             freshness_hours=freshness_hours,
         )
 
@@ -199,7 +201,9 @@ def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
         # The first call alone is a broad web-search scan across the
         # whole pool, which can take a while by itself; escalations add
         # more on top. Errs generous.
-        expected_runtime_seconds = max(300, max_calls * 60)
+        expected_runtime_seconds = max(
+            300, (max_calls + dst_max_calls) * 60
+        )
 
         cleanup_thread = threading.Thread(
             target=service_manager.wait_and_delete,

@@ -236,6 +236,7 @@ class RailwayServiceManager:
         *,
         pool_size: int = 50,
         max_calls: int = 5,
+        dst_max_calls: int = 2,
         freshness_hours: int = 24,
     ) -> RailwayService:
         job_id = uuid.uuid4().hex[:8]
@@ -245,6 +246,7 @@ class RailwayServiceManager:
                 "fantasy-gm worker evaluate "
                 f"--pool-size {pool_size} "
                 f"--max-calls {max_calls} "
+                f"--dst-max-calls {dst_max_calls} "
                 f"--freshness-hours {freshness_hours}"
             ),
         )

@@ -11,6 +11,7 @@ from fantasy_gm.espn.constants import POSITION_IDS
 from fantasy_gm.espn.roster import load_team_roster
 from fantasy_gm.models.roster import RosterEntry
 
+from .dst_news_scan import run_dst_news_scan
 from .models import AIContextResult
 from .news_scan import run_news_scan
 from .postgres_store import PostgresContextStore
@@ -147,6 +148,7 @@ def evaluate_players(
     free_agent_pool_size: int = 50,
     freshness_hours: int = 24,
     max_calls: int = 5,
+    dst_max_calls: int = 2,
     progress: ProgressCallback | None = None,
 ) -> list[AIContextResult]:
     """
@@ -161,6 +163,13 @@ def evaluate_players(
     escalation research strategy instead of per-player research calls —
     most players most days have no off-field news at all, so researching
     each individually spent nearly the whole budget on non-findings.
+
+    D/ST entries run through a separate scan (dst_news_scan.run_dst_news_scan)
+    with their own small budget rather than the individual-player scan:
+    a team defense isn't a person, so "holdouts" or "personal life" don't
+    apply, but "which starting defenders are hurt" or "did the
+    coordinator change" do — different enough questions to warrant a
+    dedicated prompt instead of stretching the player-focused one to fit.
     """
     store = store or PostgresContextStore()
 
@@ -180,16 +189,27 @@ def evaluate_players(
         )
     ]
 
+    stale_dst = [p for p in stale if p.position == "D/ST"]
+    stale_players = [p for p in stale if p.position != "D/ST"]
+
     if progress:
         progress(len(stale), len(universe))
 
+    broad_model = os.getenv("FANTASY_GM_CONTEXT_MODEL", "gpt-5.6-luna")
+    deep_dive_model = os.getenv("FANTASY_GM_DEEP_DIVE_MODEL", "gpt-5.6-terra")
+
     results = run_news_scan(
-        stale,
-        broad_model=os.getenv("FANTASY_GM_CONTEXT_MODEL", "gpt-5.6-luna"),
-        deep_dive_model=os.getenv(
-            "FANTASY_GM_DEEP_DIVE_MODEL", "gpt-5.6-terra"
-        ),
+        stale_players,
+        broad_model=broad_model,
+        deep_dive_model=deep_dive_model,
         max_calls=max_calls,
+    )
+
+    results += run_dst_news_scan(
+        stale_dst,
+        broad_model=broad_model,
+        deep_dive_model=deep_dive_model,
+        max_calls=dst_max_calls,
     )
 
     store.put_many(results)

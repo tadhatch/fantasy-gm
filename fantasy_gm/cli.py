@@ -467,6 +467,11 @@ def worker_evaluate(
         "--max-calls",
         help="Broad-scan + escalation call budget for this run (real OpenAI API cost)",
     ),
+    dst_max_calls: int = typer.Option(
+        2,
+        "--dst-max-calls",
+        help="Separate broad-scan + escalation call budget just for D/ST entries",
+    ),
     freshness_hours: int = typer.Option(
         24,
         "--freshness-hours",
@@ -498,6 +503,7 @@ def worker_evaluate(
         team_id=team_id or settings.espn_team_id,
         free_agent_pool_size=pool_size,
         max_calls=max_calls,
+        dst_max_calls=dst_max_calls,
         freshness_hours=freshness_hours,
         progress=progress,
     )
