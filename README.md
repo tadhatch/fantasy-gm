@@ -2,6 +2,8 @@
 
 AI-assisted ESPN fantasy football manager.
 
+[![Security](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/security.yml/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/security.yml)
+
 ## Setup
 
 ```bash
