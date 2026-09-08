@@ -487,11 +487,18 @@ def _dispatch_incoming_trade_worker(
     deep_dive_budget = int(
         os.getenv("FANTASY_GM_INCOMING_TRADE_DEEP_DIVE_BUDGET", "1")
     )
+    confirm = (
+        os.getenv("FANTASY_GM_INCOMING_TRADE_CONFIRM", "false")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
 
     try:
         worker = service_manager.launch_incoming_trade_worker(
             trade_id=trade.trade_id,
             deep_dive_budget=deep_dive_budget,
+            confirm=confirm,
         )
 
         console.print(

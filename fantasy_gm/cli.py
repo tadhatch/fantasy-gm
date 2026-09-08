@@ -625,15 +625,19 @@ def worker_trade(
         "--no-submit",
         help="Skip the transaction call entirely (always shadows regardless either way)",
     ),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
 ) -> None:
     """
     Roster analysis -> Python-only partner matching -> trade-proposal
     reasoning -> GM decision. 3 core OpenAI calls plus up to
     --deep-dive-budget more for fresh research the reasoning stage
-    specifically asks for. Always shadow-logs: this pipeline hardcodes
-    confirm=False on its own propose_trade() call, unlike lineup/waiver
-    -- trades haven't been reviewed for live submission yet, so there is
-    no flag that flips this on.
+    specifically asks for. Shadows unless --confirm is passed AND
+    FANTASY_GM_TRANSACTIONS_MODE=live -- same double-gate pattern as
+    lineup/waiver.
     """
     from fantasy_gm.trade.pipeline import run_trade_pipeline
 
@@ -646,6 +650,7 @@ def worker_trade(
         partner_candidate_limit=partner_candidates,
         deep_dive_budget=deep_dive_budget,
         attempt_transaction=not no_submit,
+        confirm=confirm,
     )
 
     console.print(
@@ -764,16 +769,27 @@ def worker_respond_trade(
         "--no-submit",
         help="Skip the transaction call entirely (always shadows regardless either way)",
     ),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+    force_accept: bool = typer.Option(
+        False,
+        "--force-accept",
+        help="Bypass the LLM evaluation entirely and just accept -- for testing the transaction mechanics in isolation, not real decision-making",
+    ),
 ) -> None:
     """
     Evaluate ONE specific pending incoming trade and decide accept/
-    reject. Always shadow-logs: this hardcodes confirm=False on its own
-    respond_to_trade() call, same posture as the outgoing trade worker --
-    no flag exists yet that submits a real response.
+    reject. Shadows unless --confirm is passed AND
+    FANTASY_GM_TRANSACTIONS_MODE=live -- same double-gate pattern as
+    lineup/waiver.
     """
     from fantasy_gm.trade.incoming import (
-        evaluate_incoming_trade,
         find_pending_incoming_trades,
+        force_respond_to_trade,
+        evaluate_incoming_trade,
         format_trade_side,
     )
 
@@ -792,13 +808,27 @@ def worker_respond_trade(
         )
         raise typer.Exit(1)
 
-    result = evaluate_incoming_trade(
-        client,
-        team_id=resolved_team_id,
-        trade=trade,
-        deep_dive_budget=deep_dive_budget,
-        attempt_transaction=not no_submit,
-    )
+    if force_accept:
+        console.print(
+            "[yellow]--force-accept: bypassing evaluation, "
+            "accepting directly.[/yellow]"
+        )
+        result = force_respond_to_trade(
+            client,
+            team_id=resolved_team_id,
+            trade=trade,
+            accept=True,
+            confirm=confirm,
+        )
+    else:
+        result = evaluate_incoming_trade(
+            client,
+            team_id=resolved_team_id,
+            trade=trade,
+            deep_dive_budget=deep_dive_budget,
+            attempt_transaction=not no_submit,
+            confirm=confirm,
+        )
 
     console.print(
         f"[bold]Incoming trade from {trade.proposing_team_name}:[/bold]"

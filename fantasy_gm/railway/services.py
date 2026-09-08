@@ -294,17 +294,20 @@ class RailwayServiceManager:
         *,
         partner_candidates: int = 3,
         deep_dive_budget: int = 2,
+        confirm: bool = False,
     ) -> RailwayService:
-        # No confirm param -- this pipeline always shadow-logs (see
-        # trade/pipeline.py), so there's nothing to pass through yet.
         job_id = uuid.uuid4().hex[:8]
+        start_command = (
+            "fantasy-gm worker trade "
+            f"--partner-candidates {partner_candidates} "
+            f"--deep-dive-budget {deep_dive_budget}"
+        )
+        if confirm:
+            start_command += " --confirm"
+
         return self._launch_disposable_worker(
             name=f"worker-trade-{job_id}",
-            start_command=(
-                "fantasy-gm worker trade "
-                f"--partner-candidates {partner_candidates} "
-                f"--deep-dive-budget {deep_dive_budget}"
-            ),
+            start_command=start_command,
         )
 
     def launch_incoming_trade_worker(
@@ -312,18 +315,23 @@ class RailwayServiceManager:
         *,
         trade_id: str,
         deep_dive_budget: int = 1,
+        confirm: bool = False,
     ) -> RailwayService:
         # Named off the trade_id itself (not a random job id) so the
         # supervisor can check "is a worker already handling this exact
         # trade" rather than just "is any incoming-trade worker running" —
         # more than one pending trade can exist at once.
+        start_command = (
+            "fantasy-gm worker respond-trade "
+            f"--trade-id {trade_id} "
+            f"--deep-dive-budget {deep_dive_budget}"
+        )
+        if confirm:
+            start_command += " --confirm"
+
         return self._launch_disposable_worker(
             name=f"worker-trade-respond-{trade_id[:8]}",
-            start_command=(
-                "fantasy-gm worker respond-trade "
-                f"--trade-id {trade_id} "
-                f"--deep-dive-budget {deep_dive_budget}"
-            ),
+            start_command=start_command,
         )
 
     def _launch_disposable_worker(

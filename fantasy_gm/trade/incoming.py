@@ -178,6 +178,7 @@ def evaluate_incoming_trade(
     trade: PendingIncomingTrade,
     deep_dive_budget: int = 1,
     attempt_transaction: bool = True,
+    confirm: bool = False,
     store: PostgresContextStore | None = None,
     decision_store: IncomingTradeDecisionStore | None = None,
     router: ContextModelRouter | None = None,
@@ -189,9 +190,10 @@ def evaluate_incoming_trade(
     specified by the other team, so this is one yes/no judgment, not a
     multi-stage search-then-decide pipeline.
 
-    Always shadow-logs: respond_to_trade() is called with confirm=False
-    hardcoded, same posture as the outgoing trade worker -- no parameter
-    or env var exists yet that submits a real accept/reject.
+    Shadows unless confirm=True AND FANTASY_GM_TRANSACTIONS_MODE=live --
+    same double-gate pattern as lineup/waiver. This was a deliberate,
+    explicit policy change (like waiver's), not a default flip: confirm
+    defaults to False, so nothing submits differently until it's set.
     """
     store = store or PostgresContextStore()
     decision_store = decision_store or IncomingTradeDecisionStore()
@@ -290,13 +292,12 @@ def evaluate_incoming_trade(
     executed = False
     if attempt_transaction:
         txn = ESPNTransactionsClient(client)
-        # confirm is deliberately hardcoded False -- see docstring above.
         response = txn.respond_to_trade(
             team_id=team_id,
             trade_id=trade.trade_id,
             accept=accept,
             scoring_period_id=current_scoring_period(client),
-            confirm=False,
+            confirm=confirm,
         )
         executed = response is not None
 
@@ -315,6 +316,54 @@ def evaluate_incoming_trade(
     except Exception:
         logger.exception(
             "incoming trade: failed to record decision for %s",
+            trade.trade_id,
+        )
+
+    return result
+
+
+def force_respond_to_trade(
+    client: ESPNClient,
+    *,
+    team_id: int,
+    trade: PendingIncomingTrade,
+    accept: bool,
+    confirm: bool = False,
+    decision_store: IncomingTradeDecisionStore | None = None,
+) -> IncomingTradeResult:
+    """
+    Bypass evaluate_incoming_trade()'s reasoning entirely and submit a
+    forced accept/reject — for deliberately testing the transaction
+    mechanics (payload shape, real submission) in isolation from the
+    LLM's judgment, not for real decision-making.
+    """
+    decision_store = decision_store or IncomingTradeDecisionStore()
+
+    txn = ESPNTransactionsClient(client)
+    response = txn.respond_to_trade(
+        team_id=team_id,
+        trade_id=trade.trade_id,
+        accept=accept,
+        scoring_period_id=current_scoring_period(client),
+        confirm=confirm,
+    )
+    executed = response is not None
+
+    result = IncomingTradeResult(
+        trade=trade,
+        accept=accept,
+        confidence=1.0,
+        reasoning="Manually forced, bypassing evaluation (mechanics test).",
+        deep_dives_used=[],
+        calls_used=0,
+        executed=executed,
+    )
+
+    try:
+        decision_store.record(trade=trade, team_id=team_id, result=result)
+    except Exception:
+        logger.exception(
+            "incoming trade: failed to record forced decision for %s",
             trade.trade_id,
         )
 

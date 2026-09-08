@@ -37,15 +37,15 @@ through a shadow-first gate. `FANTASY_GM_TRANSACTIONS_MODE=shadow` (the
 default) logs exactly what would be submitted without ever calling ESPN's
 write endpoints. Nothing submits for real unless that mode is `live` *and*
 the specific call also passes `--confirm` / `confirm=True` — for the
-scheduled lineup and waiver workers, that second gate is its own env var
-(`FANTASY_GM_LINEUP_CONFIRM` / `FANTASY_GM_WAIVER_CONFIRM`), off by
-default, so flipping the global mode alone doesn't make either one
-autonomous. Trades (both proposing one and responding to one sent to us)
-are more conservative still: `confirm=False` is hardcoded directly in
-`trade/pipeline.py` and `trade/incoming.py`, with no parameter or env var
-that flips it at all — trade payloads have never been submitted to ESPN
-for real, so there's currently no way to make them live short of
-changing that code.
+automated workers, that second gate is its own env var
+(`FANTASY_GM_LINEUP_CONFIRM` / `FANTASY_GM_WAIVER_CONFIRM` /
+`FANTASY_GM_INCOMING_TRADE_CONFIRM`), off by default, so flipping the
+global mode alone doesn't make any of them autonomous. The outgoing
+trade worker (`fantasy-gm worker trade`) isn't scheduled at all, so its
+`--confirm` only ever applies to a manual run. `worker respond-trade`
+also has a `--force-accept` escape hatch that skips the LLM evaluation
+entirely — for testing the transaction mechanics in isolation, never for
+a real decision.
 
 ## Architecture
 
@@ -108,13 +108,14 @@ fantasy-gm worker lineup [--week N] [--confirm]
 fantasy-gm worker waiver [--pool-size 60] [--shortlist-size 15] [--no-submit]
 
 # Manual only for now:
-fantasy-gm worker trade [--partner-candidates 3] [--deep-dive-budget 2]
+fantasy-gm worker trade [--partner-candidates 3] [--deep-dive-budget 2] [--confirm]
 
 # Read-only lookup + evaluator for trades other teams send us -- the
 # supervisor polls for these automatically and dispatches an evaluation
-# worker per pending trade, but always shadow-logs its decision:
+# worker per pending trade (shadow by default, live if
+# FANTASY_GM_INCOMING_TRADE_CONFIRM is set):
 fantasy-gm worker list-incoming-trades
-fantasy-gm worker respond-trade --trade-id <id> [--deep-dive-budget 1]
+fantasy-gm worker respond-trade --trade-id <id> [--deep-dive-budget 1] [--confirm] [--force-accept]
 ```
 
 ### Context / chatbot

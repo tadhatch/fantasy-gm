@@ -81,6 +81,7 @@ def run_trade_pipeline(
     partner_candidate_limit: int = 3,
     deep_dive_budget: int = 2,
     attempt_transaction: bool = True,
+    confirm: bool = False,
     store: PostgresContextStore | None = None,
     decision_store: TradeDecisionStore | None = None,
     router: ContextModelRouter | None = None,
@@ -91,12 +92,10 @@ def run_trade_pipeline(
     up to `deep_dive_budget` fresh web-search calls the reasoning stage
     can request for specific players.
 
-    Always shadow-logs: this pipeline hardcodes confirm=False on its own
-    propose_trade() call regardless of FANTASY_GM_TRANSACTIONS_MODE or
-    anything else -- trades haven't been reviewed for live submission the
-    way lineup and waiver have, so there's deliberately no way to flip
-    this on short of changing this code, same as waivers were before that
-    review happened.
+    Shadows unless confirm=True AND FANTASY_GM_TRANSACTIONS_MODE=live --
+    same double-gate pattern as lineup/waiver. This was a deliberate,
+    explicit policy change, not a default flip: confirm defaults to
+    False, so nothing submits differently until it's set.
     """
     store = store or PostgresContextStore()
     decision_store = decision_store or TradeDecisionStore()
@@ -262,10 +261,6 @@ def run_trade_pipeline(
         and decision.request_player_ids
     ):
         txn = ESPNTransactionsClient(client)
-        # confirm is deliberately hardcoded False -- see the docstring
-        # above. Trades haven't been reviewed for live submission the way
-        # lineup and waiver have, so there's no config flag that flips
-        # this at all right now.
         response = txn.propose_trade(
             proposing_team_id=team_id,
             receiving_team_id=decision.partner_team_id,
@@ -273,7 +268,7 @@ def run_trade_pipeline(
             players_requested=decision.request_player_ids,
             scoring_period_id=current_scoring_period(client),
             message=decision.message,
-            confirm=False,
+            confirm=confirm,
         )
         executed = response is not None
 
