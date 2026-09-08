@@ -1,8 +1,9 @@
 # fantasy-gm
 
 An autonomous ESPN fantasy football GM: it drafts, sets lineups, evaluates
-waivers, and researches real-world news about your players — all backed by
-a durable evaluation cache instead of one-off LLM calls per decision.
+waivers, proposes and responds to trades, and researches real-world news
+about your players — all backed by a durable evaluation cache instead of
+one-off LLM calls per decision.
 
 [![Security](https://github.com/tadhatch/fantasy-gm/actions/workflows/security.yml/badge.svg)](https://github.com/tadhatch/fantasy-gm/actions/workflows/security.yml)
 
@@ -47,21 +48,37 @@ also has a `--force-accept` escape hatch that skips the LLM evaluation
 entirely — for testing the transaction mechanics in isolation, never for
 a real decision.
 
+Detecting an incoming trade and *acting* on one are separately gated too:
+the supervisor always logs a not-yet-decided trade proposal it sees
+(`FANTASY_GM_INCOMING_TRADE_ENABLED`), but only dispatches an evaluation
+worker for it if `FANTASY_GM_INCOMING_TRADE_AUTO_DISPATCH` is also true —
+useful for confirming the supervisor can actually see a real trade before
+trusting it to also respond to one.
+
 ## Architecture
 
 - **Supervisor** (`fantasy-gm run`) — the one long-running process. Polls
   on an interval, keeps the chatbot alive, sweeps up any finished
-  disposable workers, and dispatches recurring workers on schedule (the
-  lineup worker fires ahead of each wave of kickoffs, read from the real
-  NFL schedule via `nflreadpy` — not a fixed interval, since kickoff
-  windows now span most weekdays in a season).
-- **Disposable workers** — each scheduled job (evaluation, lineup, waiver,
-  and one per pending incoming trade) runs as a short-lived Railway
-  service that does its work and deletes itself, rather than living
-  inside the supervisor process.
-- **Postgres** — the durable store behind all of it: the evaluation cache,
-  waiver decision audit trail, and schedule/task-run bookkeeping the
-  supervisor uses to avoid double-dispatching work.
+  disposable workers, and dispatches recurring workers on schedule:
+  - the lineup worker fires ahead of each wave of kickoffs, read from the
+    real NFL schedule via `nflreadpy` — not a fixed interval, since
+    kickoff windows now span most weekdays in a season.
+  - the waiver worker fires once daily, a fixed buffer after this
+    league's own waiver-processing hour — read live from ESPN's own
+    settings (`acquisitionSettings.waiverProcessHour`), not hardcoded, so
+    it stays correct if a commissioner changes it.
+  - incoming trades are checked every poll cycle (no fixed schedule makes
+    sense here — any number of distinct pending trades can show up at
+    any time), each tracked independently by ESPN's own transaction id
+    so a still-pending one isn't re-evaluated on every cycle.
+- **Disposable workers** — each dispatched job (evaluation, lineup,
+  waiver, and one per pending incoming trade) runs as a short-lived
+  Railway service that does its work and deletes itself, rather than
+  living inside the supervisor process.
+- **Postgres** — the durable store behind all of it: the evaluation
+  cache, the waiver and trade decision audit trails, and schedule/
+  task-run bookkeeping the supervisor uses to avoid double-dispatching
+  work.
 
 ## Setup
 
