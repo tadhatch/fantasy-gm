@@ -36,9 +36,12 @@ personal life, which don't apply to a unit.
 through a shadow-first gate. `FANTASY_GM_TRANSACTIONS_MODE=shadow` (the
 default) logs exactly what would be submitted without ever calling ESPN's
 write endpoints. Nothing submits for real unless that mode is `live` *and*
-the specific call also passes `--confirm` / `confirm=True` — the waiver
-pipeline in particular never passes `confirm=True` itself, so it always
-shadows regardless of the global mode.
+the specific call also passes `--confirm` / `confirm=True` — for the
+scheduled lineup and waiver workers, that second gate is its own env var
+(`FANTASY_GM_LINEUP_CONFIRM` / `FANTASY_GM_WAIVER_CONFIRM`), off by
+default, so flipping the global mode alone doesn't make either one
+autonomous. There is no trade worker yet, so trades always shadow
+regardless.
 
 ## Architecture
 

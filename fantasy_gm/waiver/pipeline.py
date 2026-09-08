@@ -84,6 +84,7 @@ def run_waiver_pipeline(
     shortlist_size: int = 15,
     deep_dive_budget: int = 3,
     attempt_transaction: bool = True,
+    confirm: bool = False,
     store: PostgresContextStore | None = None,
     decision_store: WaiverDecisionStore | None = None,
     router: ContextModelRouter | None = None,
@@ -256,20 +257,28 @@ def run_waiver_pipeline(
         and decision.add_player_id
     ):
         txn = ESPNTransactionsClient(client)
-        # confirm is deliberately hardcoded False: this pipeline decides
-        # WHAT to do, but per the "shadow everything first" policy for
-        # waivers/trades, only a human (or a later, explicit policy
-        # change) decides whether it actually submits. add_drop() only
-        # returns non-None when it actually posted to ESPN, so `executed`
-        # reflects that rather than "we made the call".
+        # The GM-decision stage isn't told whether this league runs FAAB
+        # or traditional priority waivers, so it can propose a bid amount
+        # that doesn't apply here — this league uses priority waivers
+        # (isUsingAcquisitionBudget is False), so a bid is meaningless and
+        # is dropped before it ever reaches ESPN, regardless of what the
+        # LLM guessed. The recorded decision (decision_store.record below)
+        # still keeps whatever the LLM originally proposed, for audit
+        # purposes -- only the actual submission is corrected.
+        # `confirm` is the same double gate as every other transaction:
+        # the caller must pass it AND FANTASY_GM_TRANSACTIONS_MODE must be
+        # live, or this always just shadow-logs.
+        bid_amount = (
+            decision.faab_bid if _league_uses_faab(client) else None
+        )
         response = txn.add_drop(
             team_id=team_id,
             add_player_id=decision.add_player_id,
             drop_player_id=decision.drop_player_id,
             scoring_period_id=current_scoring_period(client),
             via_waiver=decision.use_waiver,
-            bid_amount=decision.faab_bid,
-            confirm=False,
+            bid_amount=bid_amount,
+            confirm=confirm,
         )
         executed = response is not None
 
@@ -294,6 +303,22 @@ def run_waiver_pipeline(
         logger.exception("waiver: failed to record task run")
 
     return result
+
+
+def _league_uses_faab(client: ESPNClient) -> bool:
+    try:
+        data = client.get_league(["mSettings"])
+        return bool(
+            data["settings"]["acquisitionSettings"][
+                "isUsingAcquisitionBudget"
+            ]
+        )
+    except Exception:
+        logger.exception(
+            "waiver: failed to read acquisition settings; "
+            "assuming no FAAB bid"
+        )
+        return False
 
 
 def _roster_payload(roster, cached_context) -> list[dict]:

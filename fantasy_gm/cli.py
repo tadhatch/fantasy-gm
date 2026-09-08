@@ -538,14 +538,18 @@ def worker_waiver(
         "--no-submit",
         help="Skip the transaction call entirely (still respects shadow mode either way)",
     ),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
 ) -> None:
     """
     Roster evaluation -> free-agent screening -> deep evaluation ->
     GM decision. 4 OpenAI calls plus up to --deep-dive-budget more for
     fresh research the decision stage specifically asks for. Submits via
     the transactions client, which shadows unless FANTASY_GM_TRANSACTIONS_MODE
-    is live AND is passed confirm=True — this pipeline never passes
-    confirm=True itself, per the "shadow everything first" policy.
+    is live AND --confirm is also passed here.
     """
     from fantasy_gm.waiver.pipeline import run_waiver_pipeline
 
@@ -559,6 +563,7 @@ def worker_waiver(
         shortlist_size=shortlist_size,
         deep_dive_budget=deep_dive_budget,
         attempt_transaction=not no_submit,
+        confirm=confirm,
     )
 
     console.print(

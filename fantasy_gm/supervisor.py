@@ -343,12 +343,19 @@ def _dispatch_waiver_worker(service_manager: RailwayServiceManager) -> None:
     deep_dive_budget = int(
         os.getenv("FANTASY_GM_WAIVER_DEEP_DIVE_BUDGET", "3")
     )
+    confirm = (
+        os.getenv("FANTASY_GM_WAIVER_CONFIRM", "false")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
 
     try:
         worker = service_manager.launch_waiver_worker(
             pool_size=pool_size,
             shortlist_size=shortlist_size,
             deep_dive_budget=deep_dive_budget,
+            confirm=confirm,
         )
 
         console.print(
