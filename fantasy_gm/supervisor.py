@@ -25,10 +25,13 @@ WAIVER_WORKER_PREFIX = "worker-waiver-"
 # How long before a wave of kickoffs the lineup should already be set.
 LINEUP_CHECKPOINT_BUFFER_MINUTES = 75
 
-# 30 minutes after this league's waiverProcessHour (11 AM ET) — see
-# _most_recent_waiver_checkpoint for why.
-WAIVER_CHECKPOINT_HOUR = 11
-WAIVER_CHECKPOINT_MINUTE = 30
+# How long after this league's own waiverProcessHour (read live from ESPN,
+# not hardcoded — see _waiver_process_hour) to run the waiver worker.
+WAIVER_CHECKPOINT_BUFFER_MINUTES = 30
+DEFAULT_WAIVER_PROCESS_HOUR = 11  # fallback only, if ESPN can't be reached
+
+_WAIVER_PROCESS_HOUR_CACHE_TTL_SECONDS = 6 * 3600
+_waiver_process_hour_cache: tuple[float, int] | None = None
 
 
 def _poll_seconds() -> int:
@@ -132,32 +135,73 @@ def _worker_already_running(
     )
 
 
-def _most_recent_waiver_checkpoint(now: datetime) -> datetime:
+def _waiver_process_hour(client: ESPNClient) -> int:
     """
-    Most recent daily 11:30 AM ET checkpoint that has already passed —
-    30 minutes after this league's own waiverProcessHour (11 AM ET,
-    confirmed via mSettings.acquisitionSettings), so each run sees the
-    prior day's claims already resolved (a fresh free-agent pool) and
-    gets maximum standing before the *next* processing window, rather
-    than being submitted right before a cutoff. Runs every calendar day,
-    including days this league doesn't actually process waivers on (e.g.
-    Tuesday here) — harmless: a claim made on an off day just sits until
-    the next real processing day, and the daily reasoning refresh is
-    still worth having regardless of whether that day happens to process.
+    This league's actual waiver-processing hour (ET), read live from
+    ESPN's own settings rather than assumed — leagues can and do
+    configure this differently, and a commissioner can change it
+    mid-season. Cached for a few hours since it's a league setting, not
+    something that changes minute to minute, and this gets checked every
+    supervisor poll.
+    """
+    global _waiver_process_hour_cache
+
+    now_ts = time.monotonic()
+    if (
+        _waiver_process_hour_cache
+        and now_ts - _waiver_process_hour_cache[0]
+        < _WAIVER_PROCESS_HOUR_CACHE_TTL_SECONDS
+    ):
+        return _waiver_process_hour_cache[1]
+
+    try:
+        data = client.get_league(["mSettings"])
+        hour = int(
+            data["settings"]["acquisitionSettings"]["waiverProcessHour"]
+        )
+    except Exception as exc:
+        hour = (
+            _waiver_process_hour_cache[1]
+            if _waiver_process_hour_cache
+            else DEFAULT_WAIVER_PROCESS_HOUR
+        )
+        console.print(
+            f"[red]Failed to read waiver process hour, "
+            f"using {hour}: {exc!r}[/red]"
+        )
+
+    _waiver_process_hour_cache = (now_ts, hour)
+    return hour
+
+
+def _most_recent_waiver_checkpoint(
+    now: datetime, client: ESPNClient
+) -> datetime:
+    """
+    Most recent daily checkpoint that has already passed —
+    WAIVER_CHECKPOINT_BUFFER_MINUTES after this league's own
+    waiverProcessHour, so each run sees the prior day's claims already
+    resolved (a fresh free-agent pool) and gets maximum standing before
+    the *next* processing window, rather than being submitted right
+    before a cutoff. Runs every calendar day, including days this league
+    doesn't actually process waivers on (e.g. Tuesday here) — harmless: a
+    claim made on an off day just sits until the next real processing
+    day, and the daily reasoning refresh is still worth having regardless
+    of whether that day happens to process.
     """
     now_local = now.astimezone(NFL_TZ)
-    checkpoint_today = now_local.replace(
-        hour=WAIVER_CHECKPOINT_HOUR,
-        minute=WAIVER_CHECKPOINT_MINUTE,
-        second=0,
-        microsecond=0,
+    hour = _waiver_process_hour(client)
+    base = now_local.replace(hour=hour, minute=0, second=0, microsecond=0)
+    checkpoint_today = base + timedelta(
+        minutes=WAIVER_CHECKPOINT_BUFFER_MINUTES
     )
+
     if checkpoint_today <= now_local:
         return checkpoint_today
     return checkpoint_today - timedelta(days=1)
 
 
-def _waiver_due() -> bool:
+def _waiver_due(client: ESPNClient) -> bool:
     from fantasy_gm.railway.task_runs import TaskRunStore
 
     try:
@@ -168,7 +212,9 @@ def _waiver_due() -> bool:
         )
         return False
 
-    checkpoint = _most_recent_waiver_checkpoint(datetime.now(timezone.utc))
+    checkpoint = _most_recent_waiver_checkpoint(
+        datetime.now(timezone.utc), client
+    )
 
     if last_run is None:
         return True
@@ -545,7 +591,7 @@ def run_supervisor(client: ESPNClient) -> None:
                     _dispatch_lineup_worker(service_manager)
 
             if _waiver_enabled():
-                if _waiver_due() and not _worker_already_running(
+                if _waiver_due(client) and not _worker_already_running(
                     service_manager, WAIVER_WORKER_PREFIX
                 ):
                     console.print(
