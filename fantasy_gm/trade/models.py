@@ -80,7 +80,9 @@ class PendingIncomingTrade:
     proposing_team_id: int
     proposing_team_name: str
     offered_to_us_ids: list[int]
+    offered_to_us_names: list[str]
     requested_from_us_ids: list[int]
+    requested_from_us_names: list[str]
     proposed_date: int | None = None
 
 

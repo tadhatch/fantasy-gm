@@ -65,7 +65,7 @@ def find_pending_incoming_trades(
         if t.get("id") is not None
     }
 
-    pending: list[PendingIncomingTrade] = []
+    raw: list[dict] = []
     for txn in data.get("transactions", []):
         if not txn.get("isPending"):
             continue
@@ -95,20 +95,55 @@ def find_pending_incoming_trades(
         if trade_id is None:
             continue
 
-        pending.append(
-            PendingIncomingTrade(
-                trade_id=str(trade_id),
-                proposing_team_id=proposing_team_id,
-                proposing_team_name=teams.get(
-                    proposing_team_id, f"Team {proposing_team_id}"
-                ),
-                offered_to_us_ids=offered_to_us,
-                requested_from_us_ids=requested_from_us,
-                proposed_date=txn.get("proposedDate"),
-            )
+        raw.append(
+            {
+                "trade_id": str(trade_id),
+                "proposing_team_id": proposing_team_id,
+                "offered_to_us": offered_to_us,
+                "requested_from_us": requested_from_us,
+                "proposed_date": txn.get("proposedDate"),
+            }
         )
 
-    return pending
+    # One batched name lookup covering every pending trade, rather than
+    # a separate ESPN call per trade — most polls will find zero or one.
+    all_player_ids = sorted(
+        {
+            pid
+            for t in raw
+            for pid in t["offered_to_us"] + t["requested_from_us"]
+        }
+    )
+    player_info = _player_lookup(client, all_player_ids)
+
+    def _names(ids: list[int]) -> list[str]:
+        return [
+            player_info.get(pid, {}).get("name", f"ESPN {pid}")
+            for pid in ids
+        ]
+
+    return [
+        PendingIncomingTrade(
+            trade_id=t["trade_id"],
+            proposing_team_id=t["proposing_team_id"],
+            proposing_team_name=teams.get(
+                t["proposing_team_id"], f"Team {t['proposing_team_id']}"
+            ),
+            offered_to_us_ids=t["offered_to_us"],
+            offered_to_us_names=_names(t["offered_to_us"]),
+            requested_from_us_ids=t["requested_from_us"],
+            requested_from_us_names=_names(t["requested_from_us"]),
+            proposed_date=t["proposed_date"],
+        )
+        for t in raw
+    ]
+
+
+def format_trade_side(names: list[str], ids: list[int]) -> str:
+    """Shared "Name (id), Name (id)" formatting for CLI/log display."""
+    if not ids:
+        return "-"
+    return ", ".join(f"{name} ({pid})" for name, pid in zip(names, ids))
 
 
 def _player_lookup(

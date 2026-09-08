@@ -532,7 +532,10 @@ def _check_incoming_trades(
     exist at once, so each is tracked independently by its own ESPN
     transaction id rather than a single last-run timestamp.
     """
-    from fantasy_gm.trade.incoming import find_pending_incoming_trades
+    from fantasy_gm.trade.incoming import (
+        find_pending_incoming_trades,
+        format_trade_side,
+    )
     from fantasy_gm.trade.store import IncomingTradeDecisionStore
 
     try:
@@ -572,8 +575,10 @@ def _check_incoming_trades(
             f"[cyan][WORKER][/cyan] "
             f"incoming trade detected: {trade.trade_id} from "
             f"{trade.proposing_team_name} "
-            f"(offered: {trade.offered_to_us_ids}, "
-            f"requested: {trade.requested_from_us_ids})"
+            f"(offered: "
+            f"{format_trade_side(trade.offered_to_us_names, trade.offered_to_us_ids)}, "
+            f"requested: "
+            f"{format_trade_side(trade.requested_from_us_names, trade.requested_from_us_ids)})"
         )
 
         if not _incoming_trade_auto_dispatch_enabled():

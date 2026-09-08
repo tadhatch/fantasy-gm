@@ -709,7 +709,10 @@ def worker_list_incoming_trades(
     no LLM calls. Useful for finding a --trade-id to pass to
     `worker respond-trade`, or just checking what's sitting unanswered.
     """
-    from fantasy_gm.trade.incoming import find_pending_incoming_trades
+    from fantasy_gm.trade.incoming import (
+        find_pending_incoming_trades,
+        format_trade_side,
+    )
 
     settings = get_settings()
     client = ESPNClient(settings)
@@ -731,8 +734,10 @@ def worker_list_incoming_trades(
         table.add_row(
             t.trade_id,
             t.proposing_team_name,
-            ", ".join(map(str, t.offered_to_us_ids)) or "-",
-            ", ".join(map(str, t.requested_from_us_ids)) or "-",
+            format_trade_side(t.offered_to_us_names, t.offered_to_us_ids),
+            format_trade_side(
+                t.requested_from_us_names, t.requested_from_us_ids
+            ),
         )
     console.print(table)
 
@@ -769,6 +774,7 @@ def worker_respond_trade(
     from fantasy_gm.trade.incoming import (
         evaluate_incoming_trade,
         find_pending_incoming_trades,
+        format_trade_side,
     )
 
     settings = get_settings()
@@ -797,8 +803,14 @@ def worker_respond_trade(
     console.print(
         f"[bold]Incoming trade from {trade.proposing_team_name}:[/bold]"
     )
-    console.print(f"  Would receive: {trade.offered_to_us_ids}")
-    console.print(f"  Would give up: {trade.requested_from_us_ids}")
+    console.print(
+        f"  Would receive: "
+        f"{format_trade_side(trade.offered_to_us_names, trade.offered_to_us_ids)}"
+    )
+    console.print(
+        f"  Would give up: "
+        f"{format_trade_side(trade.requested_from_us_names, trade.requested_from_us_ids)}"
+    )
     console.print()
     console.print(
         f"[bold cyan]Decision:[/bold cyan] "
