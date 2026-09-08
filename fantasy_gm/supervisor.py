@@ -466,6 +466,21 @@ def _incoming_trade_enabled() -> bool:
     )
 
 
+def _incoming_trade_auto_dispatch_enabled() -> bool:
+    # Separate from _incoming_trade_enabled(): that one gates detection
+    # (and its log line) entirely, this one only gates whether a detected
+    # trade also gets an evaluation worker dispatched automatically.
+    # Turning this off while leaving detection on is useful on its own —
+    # e.g. confirming the supervisor actually sees a real incoming trade
+    # before trusting it to also act on one.
+    return (
+        os.getenv("FANTASY_GM_INCOMING_TRADE_AUTO_DISPATCH", "true")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+
+
 def _dispatch_incoming_trade_worker(
     service_manager: RailwayServiceManager, trade
 ) -> None:
@@ -509,12 +524,13 @@ def _check_incoming_trades(
     service_manager: RailwayServiceManager, client: ESPNClient
 ) -> None:
     """
-    Polls for trade proposals other teams have sent us and dispatches an
-    evaluation worker for each one not already decided or already being
-    handled. Unlike the other recurring workers, there's no single "is it
-    due" question — any number of distinct pending trades could exist at
-    once, so each is tracked independently by its own ESPN transaction id
-    rather than a single last-run timestamp.
+    Polls for trade proposals other teams have sent us, logs each
+    not-yet-decided one it sees, and (if
+    _incoming_trade_auto_dispatch_enabled()) dispatches an evaluation
+    worker for it. Unlike the other recurring workers, there's no single
+    "is it due" question — any number of distinct pending trades could
+    exist at once, so each is tracked independently by its own ESPN
+    transaction id rather than a single last-run timestamp.
     """
     from fantasy_gm.trade.incoming import find_pending_incoming_trades
     from fantasy_gm.trade.store import IncomingTradeDecisionStore
@@ -552,14 +568,24 @@ def _check_incoming_trades(
             )
             continue
 
+        console.print(
+            f"[cyan][WORKER][/cyan] "
+            f"incoming trade detected: {trade.trade_id} from "
+            f"{trade.proposing_team_name} "
+            f"(offered: {trade.offered_to_us_ids}, "
+            f"requested: {trade.requested_from_us_ids})"
+        )
+
+        if not _incoming_trade_auto_dispatch_enabled():
+            continue
+
         prefix = f"{INCOMING_TRADE_WORKER_PREFIX}{trade.trade_id[:8]}"
         if _worker_already_running(service_manager, prefix):
             continue
 
         console.print(
             f"[cyan][WORKER][/cyan] "
-            f"incoming trade {trade.trade_id} from "
-            f"{trade.proposing_team_name}; dispatching"
+            f"dispatching evaluation worker for trade {trade.trade_id}"
         )
         _dispatch_incoming_trade_worker(service_manager, trade)
 
