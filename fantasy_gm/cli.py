@@ -603,6 +603,99 @@ def worker_waiver(
     )
 
 
+@worker_app.command("trade")
+def worker_trade(
+    team_id: int | None = typer.Option(
+        None,
+        "--team-id",
+        help="Defaults to your configured team",
+    ),
+    partner_candidates: int = typer.Option(
+        3,
+        "--partner-candidates",
+        help="How many other teams to shortlist as potential trade partners (Python pre-filter, no LLM cost)",
+    ),
+    deep_dive_budget: int = typer.Option(
+        2,
+        "--deep-dive-budget",
+        help="Reserve fresh web-search calls the reasoning stage may spend",
+    ),
+    no_submit: bool = typer.Option(
+        False,
+        "--no-submit",
+        help="Skip the transaction call entirely (always shadows regardless either way)",
+    ),
+) -> None:
+    """
+    Roster analysis -> Python-only partner matching -> trade-proposal
+    reasoning -> GM decision. 3 core OpenAI calls plus up to
+    --deep-dive-budget more for fresh research the reasoning stage
+    specifically asks for. Always shadow-logs: this pipeline hardcodes
+    confirm=False on its own propose_trade() call, unlike lineup/waiver
+    -- trades haven't been reviewed for live submission yet, so there is
+    no flag that flips this on.
+    """
+    from fantasy_gm.trade.pipeline import run_trade_pipeline
+
+    settings = get_settings()
+    client = ESPNClient(settings)
+
+    result = run_trade_pipeline(
+        client,
+        team_id=team_id or settings.espn_team_id,
+        partner_candidate_limit=partner_candidates,
+        deep_dive_budget=deep_dive_budget,
+        attempt_transaction=not no_submit,
+    )
+
+    console.print(
+        f"[bold]Roster summary:[/bold] {result.roster_analysis.summary}"
+    )
+    console.print(
+        f"[bold]Positional needs:[/bold] "
+        f"{', '.join(result.roster_analysis.positional_needs) or 'none'}"
+    )
+    console.print(
+        f"[bold]Trade chips:[/bold] "
+        f"{', '.join(c.name for c in result.roster_analysis.trade_chips) or 'none'}"
+    )
+    console.print(
+        f"[bold]Partner candidates:[/bold] "
+        f"{', '.join(p.team_name for p in result.partner_candidates) or 'none'}"
+    )
+    console.print(
+        f"[bold]Candidate trades:[/bold] {len(result.candidate_trades)}"
+    )
+    console.print(
+        f"[bold]Deep dives used:[/bold] "
+        f"{len(result.deep_dives_used)}/{deep_dive_budget}"
+    )
+    console.print()
+    console.print(
+        f"[bold cyan]GM decision:[/bold cyan] {result.decision.action}"
+    )
+    if result.decision.action == "propose_trade":
+        console.print(
+            f"  TO {result.decision.partner_team_name} "
+            f"({result.decision.partner_team_id})"
+        )
+        console.print(
+            f"  OFFER {', '.join(result.decision.offer_player_names)} "
+            f"({result.decision.offer_player_ids})"
+        )
+        console.print(
+            f"  REQUEST {', '.join(result.decision.request_player_names)} "
+            f"({result.decision.request_player_ids})"
+        )
+    console.print(f"  reasoning: {result.decision.reasoning}")
+    console.print(f"  confidence: {result.decision.confidence:.0%}")
+    console.print()
+    console.print(
+        f"[green]Calls used: {result.calls_used}. "
+        f"Executed live: {result.executed}[/green]"
+    )
+
+
 @worker_app.command("lineup")
 def worker_lineup(
     team_id: int | None = typer.Option(

@@ -289,6 +289,24 @@ class RailwayServiceManager:
             start_command=start_command,
         )
 
+    def launch_trade_worker(
+        self,
+        *,
+        partner_candidates: int = 3,
+        deep_dive_budget: int = 2,
+    ) -> RailwayService:
+        # No confirm param -- this pipeline always shadow-logs (see
+        # trade/pipeline.py), so there's nothing to pass through yet.
+        job_id = uuid.uuid4().hex[:8]
+        return self._launch_disposable_worker(
+            name=f"worker-trade-{job_id}",
+            start_command=(
+                "fantasy-gm worker trade "
+                f"--partner-candidates {partner_candidates} "
+                f"--deep-dive-budget {deep_dive_budget}"
+            ),
+        )
+
     def _launch_disposable_worker(
         self,
         *,
