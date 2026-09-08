@@ -307,6 +307,25 @@ class RailwayServiceManager:
             ),
         )
 
+    def launch_incoming_trade_worker(
+        self,
+        *,
+        trade_id: str,
+        deep_dive_budget: int = 1,
+    ) -> RailwayService:
+        # Named off the trade_id itself (not a random job id) so the
+        # supervisor can check "is a worker already handling this exact
+        # trade" rather than just "is any incoming-trade worker running" —
+        # more than one pending trade can exist at once.
+        return self._launch_disposable_worker(
+            name=f"worker-trade-respond-{trade_id[:8]}",
+            start_command=(
+                "fantasy-gm worker respond-trade "
+                f"--trade-id {trade_id} "
+                f"--deep-dive-budget {deep_dive_budget}"
+            ),
+        )
+
     def _launch_disposable_worker(
         self,
         *,

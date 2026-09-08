@@ -40,8 +40,12 @@ the specific call also passes `--confirm` / `confirm=True` — for the
 scheduled lineup and waiver workers, that second gate is its own env var
 (`FANTASY_GM_LINEUP_CONFIRM` / `FANTASY_GM_WAIVER_CONFIRM`), off by
 default, so flipping the global mode alone doesn't make either one
-autonomous. There is no trade worker yet, so trades always shadow
-regardless.
+autonomous. Trades (both proposing one and responding to one sent to us)
+are more conservative still: `confirm=False` is hardcoded directly in
+`trade/pipeline.py` and `trade/incoming.py`, with no parameter or env var
+that flips it at all — trade payloads have never been submitted to ESPN
+for real, so there's currently no way to make them live short of
+changing that code.
 
 ## Architecture
 
@@ -51,9 +55,10 @@ regardless.
   lineup worker fires ahead of each wave of kickoffs, read from the real
   NFL schedule via `nflreadpy` — not a fixed interval, since kickoff
   windows now span most weekdays in a season).
-- **Disposable workers** — each scheduled job (evaluation, lineup, waiver)
-  runs as a short-lived Railway service that does its work and deletes
-  itself, rather than living inside the supervisor process.
+- **Disposable workers** — each scheduled job (evaluation, lineup, waiver,
+  and one per pending incoming trade) runs as a short-lived Railway
+  service that does its work and deletes itself, rather than living
+  inside the supervisor process.
 - **Postgres** — the durable store behind all of it: the evaluation cache,
   waiver decision audit trail, and schedule/task-run bookkeeping the
   supervisor uses to avoid double-dispatching work.
@@ -94,12 +99,22 @@ fantasy-gm roster add-drop --add <id> --drop <id> [--waiver --bid N] [--confirm]
 fantasy-gm roster propose-trade --to <teamId> --offer <id> --request <id> [--confirm]
 ```
 
-### Workers (one-shot; the supervisor schedules these automatically)
+### Workers (one-shot)
 
 ```bash
+# Scheduled automatically by the supervisor:
 fantasy-gm worker evaluate [--pool-size 50] [--max-calls 5] [--dst-max-calls 2]
 fantasy-gm worker lineup [--week N] [--confirm]
 fantasy-gm worker waiver [--pool-size 60] [--shortlist-size 15] [--no-submit]
+
+# Manual only for now:
+fantasy-gm worker trade [--partner-candidates 3] [--deep-dive-budget 2]
+
+# Read-only lookup + evaluator for trades other teams send us -- the
+# supervisor polls for these automatically and dispatches an evaluation
+# worker per pending trade, but always shadow-logs its decision:
+fantasy-gm worker list-incoming-trades
+fantasy-gm worker respond-trade --trade-id <id> [--deep-dive-budget 1]
 ```
 
 ### Context / chatbot

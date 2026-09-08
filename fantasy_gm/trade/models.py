@@ -72,3 +72,24 @@ class TradeRunResult:
     decision: GMDecision
     calls_used: int
     executed: bool
+
+
+@dataclass(slots=True)
+class PendingIncomingTrade:
+    trade_id: str
+    proposing_team_id: int
+    proposing_team_name: str
+    offered_to_us_ids: list[int]
+    requested_from_us_ids: list[int]
+    proposed_date: int | None = None
+
+
+@dataclass(slots=True)
+class IncomingTradeResult:
+    trade: PendingIncomingTrade
+    accept: bool
+    confidence: float
+    reasoning: str
+    deep_dives_used: list[DeepDiveRequest]
+    calls_used: int
+    executed: bool

@@ -696,6 +696,123 @@ def worker_trade(
     )
 
 
+@worker_app.command("list-incoming-trades")
+def worker_list_incoming_trades(
+    team_id: int | None = typer.Option(
+        None,
+        "--team-id",
+        help="Defaults to your configured team",
+    ),
+) -> None:
+    """
+    List pending trade proposals other teams have sent us — read-only,
+    no LLM calls. Useful for finding a --trade-id to pass to
+    `worker respond-trade`, or just checking what's sitting unanswered.
+    """
+    from fantasy_gm.trade.incoming import find_pending_incoming_trades
+
+    settings = get_settings()
+    client = ESPNClient(settings)
+
+    pending = find_pending_incoming_trades(
+        client, team_id=team_id or settings.espn_team_id
+    )
+
+    if not pending:
+        console.print("[yellow]No pending incoming trades.[/yellow]")
+        return
+
+    table = Table(title="Pending incoming trades")
+    table.add_column("Trade ID")
+    table.add_column("From")
+    table.add_column("We'd receive")
+    table.add_column("We'd give up")
+    for t in pending:
+        table.add_row(
+            t.trade_id,
+            t.proposing_team_name,
+            ", ".join(map(str, t.offered_to_us_ids)) or "-",
+            ", ".join(map(str, t.requested_from_us_ids)) or "-",
+        )
+    console.print(table)
+
+
+@worker_app.command("respond-trade")
+def worker_respond_trade(
+    trade_id: str = typer.Option(
+        ...,
+        "--trade-id",
+        help="ESPN transaction id of the pending trade to evaluate (see `worker list-incoming-trades`)",
+    ),
+    team_id: int | None = typer.Option(
+        None,
+        "--team-id",
+        help="Defaults to your configured team",
+    ),
+    deep_dive_budget: int = typer.Option(
+        1,
+        "--deep-dive-budget",
+        help="Reserve fresh web-search calls the evaluation may spend",
+    ),
+    no_submit: bool = typer.Option(
+        False,
+        "--no-submit",
+        help="Skip the transaction call entirely (always shadows regardless either way)",
+    ),
+) -> None:
+    """
+    Evaluate ONE specific pending incoming trade and decide accept/
+    reject. Always shadow-logs: this hardcodes confirm=False on its own
+    respond_to_trade() call, same posture as the outgoing trade worker --
+    no flag exists yet that submits a real response.
+    """
+    from fantasy_gm.trade.incoming import (
+        evaluate_incoming_trade,
+        find_pending_incoming_trades,
+    )
+
+    settings = get_settings()
+    client = ESPNClient(settings)
+    resolved_team_id = team_id or settings.espn_team_id
+
+    pending = find_pending_incoming_trades(
+        client, team_id=resolved_team_id
+    )
+    trade = next((t for t in pending if t.trade_id == trade_id), None)
+    if trade is None:
+        console.print(
+            f"[red]No pending incoming trade found with id "
+            f"{trade_id}[/red]"
+        )
+        raise typer.Exit(1)
+
+    result = evaluate_incoming_trade(
+        client,
+        team_id=resolved_team_id,
+        trade=trade,
+        deep_dive_budget=deep_dive_budget,
+        attempt_transaction=not no_submit,
+    )
+
+    console.print(
+        f"[bold]Incoming trade from {trade.proposing_team_name}:[/bold]"
+    )
+    console.print(f"  Would receive: {trade.offered_to_us_ids}")
+    console.print(f"  Would give up: {trade.requested_from_us_ids}")
+    console.print()
+    console.print(
+        f"[bold cyan]Decision:[/bold cyan] "
+        f"{'ACCEPT' if result.accept else 'REJECT'}"
+    )
+    console.print(f"  reasoning: {result.reasoning}")
+    console.print(f"  confidence: {result.confidence:.0%}")
+    console.print()
+    console.print(
+        f"[green]Calls used: {result.calls_used}. "
+        f"Executed live: {result.executed}[/green]"
+    )
+
+
 @worker_app.command("lineup")
 def worker_lineup(
     team_id: int | None = typer.Option(

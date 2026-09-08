@@ -21,6 +21,7 @@ console = Console()
 EVALUATION_WORKER_PREFIX = "worker-evaluate-"
 LINEUP_WORKER_PREFIX = "worker-lineup-"
 WAIVER_WORKER_PREFIX = "worker-waiver-"
+INCOMING_TRADE_WORKER_PREFIX = "worker-trade-respond-"
 
 # How long before a wave of kickoffs the lineup should already be set.
 LINEUP_CHECKPOINT_BUFFER_MINUTES = 75
@@ -456,6 +457,113 @@ def _dispatch_waiver_worker(service_manager: RailwayServiceManager) -> None:
         )
 
 
+def _incoming_trade_enabled() -> bool:
+    return (
+        os.getenv("FANTASY_GM_INCOMING_TRADE_ENABLED", "true")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+
+
+def _dispatch_incoming_trade_worker(
+    service_manager: RailwayServiceManager, trade
+) -> None:
+    deep_dive_budget = int(
+        os.getenv("FANTASY_GM_INCOMING_TRADE_DEEP_DIVE_BUDGET", "1")
+    )
+
+    try:
+        worker = service_manager.launch_incoming_trade_worker(
+            trade_id=trade.trade_id,
+            deep_dive_budget=deep_dive_budget,
+        )
+
+        console.print(
+            f"[cyan][WORKER][/cyan] "
+            f"Starting lifecycle monitor for {worker.name}"
+        )
+
+        # One reasoning call plus up to deep_dive_budget more.
+        expected_runtime_seconds = max(180, (1 + deep_dive_budget) * 60)
+
+        cleanup_thread = threading.Thread(
+            target=service_manager.wait_and_delete,
+            args=(worker,),
+            kwargs={
+                "expected_runtime_seconds": expected_runtime_seconds
+            },
+            daemon=True,
+            name=f"cleanup-{worker.name}",
+        )
+        cleanup_thread.start()
+
+    except Exception as exc:
+        console.print(
+            f"[bold red][WORKER][/bold red] "
+            f"Failed to launch incoming-trade worker: {exc!r}"
+        )
+
+
+def _check_incoming_trades(
+    service_manager: RailwayServiceManager, client: ESPNClient
+) -> None:
+    """
+    Polls for trade proposals other teams have sent us and dispatches an
+    evaluation worker for each one not already decided or already being
+    handled. Unlike the other recurring workers, there's no single "is it
+    due" question — any number of distinct pending trades could exist at
+    once, so each is tracked independently by its own ESPN transaction id
+    rather than a single last-run timestamp.
+    """
+    from fantasy_gm.trade.incoming import find_pending_incoming_trades
+    from fantasy_gm.trade.store import IncomingTradeDecisionStore
+
+    try:
+        pending = find_pending_incoming_trades(
+            client, team_id=client.settings.espn_team_id
+        )
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to check incoming trades: {exc!r}[/red]"
+        )
+        return
+
+    if not pending:
+        return
+
+    try:
+        decision_store = IncomingTradeDecisionStore()
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to open incoming trade decision store: "
+            f"{exc!r}[/red]"
+        )
+        return
+
+    for trade in pending:
+        try:
+            if decision_store.has_decided(trade.trade_id):
+                continue
+        except Exception as exc:
+            console.print(
+                f"[red]Failed to check decision store for trade "
+                f"{trade.trade_id}: {exc!r}[/red]"
+            )
+            continue
+
+        prefix = f"{INCOMING_TRADE_WORKER_PREFIX}{trade.trade_id[:8]}"
+        if _worker_already_running(service_manager, prefix):
+            continue
+
+        console.print(
+            f"[cyan][WORKER][/cyan] "
+            f"incoming trade {trade.trade_id} from "
+            f"{trade.proposing_team_name}; dispatching"
+        )
+        _dispatch_incoming_trade_worker(service_manager, trade)
+
+
 def run_supervisor(client: ESPNClient) -> None:
     console.print(
         "[bold green]Fantasy GM supervisor started in GM mode[/bold green]"
@@ -560,7 +668,6 @@ def run_supervisor(client: ESPNClient) -> None:
             # Later this loop will also:
             # - watch for upcoming draft activity
             # - dispatch the draft worker
-            # - detect incoming trades
 
             service_manager.log_services()
             _sweep_orphans(service_manager)
@@ -599,6 +706,9 @@ def run_supervisor(client: ESPNClient) -> None:
                         "waiver analysis due; dispatching"
                     )
                     _dispatch_waiver_worker(service_manager)
+
+            if _incoming_trade_enabled():
+                _check_incoming_trades(service_manager, client)
 
         except Exception as exc:
             console.print(
