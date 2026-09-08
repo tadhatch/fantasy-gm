@@ -25,6 +25,11 @@ WAIVER_WORKER_PREFIX = "worker-waiver-"
 # How long before a wave of kickoffs the lineup should already be set.
 LINEUP_CHECKPOINT_BUFFER_MINUTES = 75
 
+# 30 minutes after this league's waiverProcessHour (11 AM ET) — see
+# _most_recent_waiver_checkpoint for why.
+WAIVER_CHECKPOINT_HOUR = 11
+WAIVER_CHECKPOINT_MINUTE = 30
+
 
 def _poll_seconds() -> int:
     return int(os.getenv("FANTASY_GM_SUPERVISOR_POLL_SECONDS", "60"))
@@ -127,23 +132,43 @@ def _worker_already_running(
     )
 
 
-def _task_due(task_name: str, interval_hours: float) -> bool:
+def _most_recent_waiver_checkpoint(now: datetime) -> datetime:
     """
-    Generic recurring-task scheduling check: has it been at least
-    `interval_hours` since this task last actually ran, per Postgres
-    (fantasy_gm.railway.task_runs.TaskRunStore) — not in-memory state,
-    which would reset (and could re-trigger unnecessarily) on every
-    supervisor restart.
+    Most recent daily 11:30 AM ET checkpoint that has already passed —
+    30 minutes after this league's own waiverProcessHour (11 AM ET,
+    confirmed via mSettings.acquisitionSettings), so each run sees the
+    prior day's claims already resolved (a fresh free-agent pool) and
+    gets maximum standing before the *next* processing window, rather
+    than being submitted right before a cutoff. Runs every calendar day,
+    including days this league doesn't actually process waivers on (e.g.
+    Tuesday here) — harmless: a claim made on an off day just sits until
+    the next real processing day, and the daily reasoning refresh is
+    still worth having regardless of whether that day happens to process.
     """
+    now_local = now.astimezone(NFL_TZ)
+    checkpoint_today = now_local.replace(
+        hour=WAIVER_CHECKPOINT_HOUR,
+        minute=WAIVER_CHECKPOINT_MINUTE,
+        second=0,
+        microsecond=0,
+    )
+    if checkpoint_today <= now_local:
+        return checkpoint_today
+    return checkpoint_today - timedelta(days=1)
+
+
+def _waiver_due() -> bool:
     from fantasy_gm.railway.task_runs import TaskRunStore
 
     try:
-        last_run = TaskRunStore().last_run_at(task_name)
+        last_run = TaskRunStore().last_run_at("waiver")
     except Exception as exc:
         console.print(
-            f"[red]Failed to check {task_name} schedule: {exc!r}[/red]"
+            f"[red]Failed to check waiver schedule: {exc!r}[/red]"
         )
         return False
+
+    checkpoint = _most_recent_waiver_checkpoint(datetime.now(timezone.utc))
 
     if last_run is None:
         return True
@@ -151,8 +176,7 @@ def _task_due(task_name: str, interval_hours: float) -> bool:
     if last_run.tzinfo is None:
         last_run = last_run.replace(tzinfo=timezone.utc)
 
-    elapsed = datetime.now(timezone.utc) - last_run
-    return elapsed.total_seconds() >= interval_hours * 3600
+    return last_run < checkpoint
 
 
 def _evaluation_due(interval_hours: float) -> bool:
@@ -521,12 +545,7 @@ def run_supervisor(client: ESPNClient) -> None:
                     _dispatch_lineup_worker(service_manager)
 
             if _waiver_enabled():
-                interval_hours = float(
-                    os.getenv("FANTASY_GM_WAIVER_INTERVAL_HOURS", "24")
-                )
-                if _task_due(
-                    "waiver", interval_hours
-                ) and not _worker_already_running(
+                if _waiver_due() and not _worker_already_running(
                     service_manager, WAIVER_WORKER_PREFIX
                 ):
                     console.print(
