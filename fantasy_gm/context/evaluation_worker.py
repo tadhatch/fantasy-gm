@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Callable
 
@@ -16,6 +17,8 @@ from .models import AIContextResult
 from .news_scan import run_news_scan
 from .postgres_store import PostgresContextStore
 from .service import ContextStoreLike
+
+logger = logging.getLogger(__name__)
 
 # Positions worth spending a research call on. Matches what the draft
 # board considers draftable, expressed against POSITION_IDS' own labels
@@ -198,23 +201,47 @@ def evaluate_players(
     broad_model = os.getenv("FANTASY_GM_CONTEXT_MODEL", "gpt-5.6-luna")
     deep_dive_model = os.getenv("FANTASY_GM_DEEP_DIVE_MODEL", "gpt-5.6-terra")
 
-    results = run_news_scan(
-        stale_players,
-        broad_model=broad_model,
-        deep_dive_model=deep_dive_model,
-        max_calls=max_calls,
-    )
+    try:
+        results = run_news_scan(
+            stale_players,
+            broad_model=broad_model,
+            deep_dive_model=deep_dive_model,
+            max_calls=max_calls,
+        )
 
-    results += run_dst_news_scan(
-        stale_dst,
-        broad_model=broad_model,
-        deep_dive_model=deep_dive_model,
-        max_calls=dst_max_calls,
-    )
+        results += run_dst_news_scan(
+            stale_dst,
+            broad_model=broad_model,
+            deep_dive_model=deep_dive_model,
+            max_calls=dst_max_calls,
+        )
 
-    store.put_many(results)
+        store.put_many(results)
+    except Exception:
+        # _evaluation_due() gates on this attempt marker (separate from
+        # PostgresContextStore.latest_researched_at(), which only moves
+        # on a real successful write and must keep meaning "real content
+        # is this fresh", not "we tried"). Without marking a failed
+        # attempt too, a persistent failure (e.g. an OpenAI outage) means
+        # latest_researched_at() never advances, so the supervisor
+        # re-dispatches this worker on every single poll cycle forever
+        # instead of waiting out the normal interval -- observed live as
+        # a crash/redispatch loop every 1-3 minutes instead of once a day.
+        _mark_evaluation_attempt()
+        raise
+
+    _mark_evaluation_attempt()
 
     return results
+
+
+def _mark_evaluation_attempt() -> None:
+    try:
+        from fantasy_gm.railway.task_runs import TaskRunStore
+
+        TaskRunStore().mark_run("evaluation")
+    except Exception:
+        logger.exception("evaluation: failed to record task run")
 
 
 def _float(value: object) -> float | None:

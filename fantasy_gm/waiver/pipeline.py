@@ -112,6 +112,60 @@ def run_waiver_pipeline(
     reasoning_model = os.getenv("FANTASY_GM_CONTEXT_MODEL", "gpt-5.6-luna")
     gm_model = os.getenv("FANTASY_GM_GM_DECISION_MODEL", reasoning_model)
 
+    try:
+        result = _run_waiver_pipeline_body(
+            client,
+            team_id=team_id,
+            free_agent_pool_size=free_agent_pool_size,
+            shortlist_size=shortlist_size,
+            deep_dive_budget=deep_dive_budget,
+            attempt_transaction=attempt_transaction,
+            confirm=confirm,
+            store=store,
+            router=router,
+            reasoning_model=reasoning_model,
+            gm_model=gm_model,
+        )
+    except Exception:
+        # _waiver_due() (a daily checkpoint) only advances once
+        # mark_run("waiver") is called -- without marking a failed
+        # attempt too, a persistent failure (e.g. an OpenAI outage) means
+        # this stays "due" on every single poll forever instead of
+        # waiting for tomorrow's checkpoint, same class of bug already
+        # fixed for incoming trades and the evaluation worker.
+        _mark_waiver_attempt()
+        raise
+
+    decision_store.record(team_id=team_id, result=result)
+    _mark_waiver_attempt()
+
+    return result
+
+
+def _mark_waiver_attempt() -> None:
+    try:
+        from fantasy_gm.railway.task_runs import TaskRunStore
+
+        TaskRunStore().mark_run("waiver")
+    except Exception:
+        # Bookkeeping only — never block a real waiver decision on it.
+        logger.exception("waiver: failed to record task run")
+
+
+def _run_waiver_pipeline_body(
+    client: ESPNClient,
+    *,
+    team_id: int,
+    free_agent_pool_size: int,
+    shortlist_size: int,
+    deep_dive_budget: int,
+    attempt_transaction: bool,
+    confirm: bool,
+    store: PostgresContextStore,
+    router: ContextModelRouter,
+    reasoning_model: str,
+    gm_model: str,
+) -> WaiverRunResult:
     calls_used = 0
     cached_context = store.load_all()
 
@@ -262,9 +316,10 @@ def run_waiver_pipeline(
         # that doesn't apply here — this league uses priority waivers
         # (isUsingAcquisitionBudget is False), so a bid is meaningless and
         # is dropped before it ever reaches ESPN, regardless of what the
-        # LLM guessed. The recorded decision (decision_store.record below)
-        # still keeps whatever the LLM originally proposed, for audit
-        # purposes -- only the actual submission is corrected.
+        # LLM guessed. The recorded decision (decision_store.record(), in
+        # run_waiver_pipeline() once this returns) still keeps whatever
+        # the LLM originally proposed, for audit purposes -- only the
+        # actual submission is corrected.
         # `confirm` is the same double gate as every other transaction:
         # the caller must pass it AND FANTASY_GM_TRANSACTIONS_MODE must be
         # live, or this always just shadow-logs.
@@ -282,7 +337,7 @@ def run_waiver_pipeline(
         )
         executed = response is not None
 
-    result = WaiverRunResult(
+    return WaiverRunResult(
         roster_analysis=roster_analysis,
         shortlist=shortlist,
         candidate_moves=candidate_moves,
@@ -291,18 +346,6 @@ def run_waiver_pipeline(
         calls_used=calls_used,
         executed=executed,
     )
-
-    decision_store.record(team_id=team_id, result=result)
-
-    try:
-        from fantasy_gm.railway.task_runs import TaskRunStore
-
-        TaskRunStore().mark_run("waiver")
-    except Exception:
-        # Bookkeeping only — never block a real waiver decision on it.
-        logger.exception("waiver: failed to record task run")
-
-    return result
 
 
 def _league_uses_faab(client: ESPNClient) -> bool:

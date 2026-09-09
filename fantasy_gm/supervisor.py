@@ -226,8 +226,28 @@ def _waiver_due(client: ESPNClient) -> bool:
     return last_run < checkpoint
 
 
+def _hours_since(dt: datetime) -> float:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - dt).total_seconds() / 3600
+
+
 def _evaluation_due(interval_hours: float) -> bool:
+    """
+    Due once real content is stale (latest_researched_at, which only
+    moves on an actual successful write -- this must keep meaning "the
+    cached data is this old", not "we tried") AND we haven't attempted a
+    run in at least that same interval, successful or not.
+
+    That second clause matters specifically for failure: without it, a
+    persistent failure (e.g. an OpenAI outage) means latest_researched_at
+    never advances, so this stays "due" on every single poll forever
+    instead of backing off — observed live as a crash/redispatch loop
+    every 1-3 minutes. evaluate_players() marks a TaskRunStore attempt on
+    both success and failure for exactly this reason.
+    """
     from fantasy_gm.context.postgres_store import PostgresContextStore
+    from fantasy_gm.railway.task_runs import TaskRunStore
 
     try:
         latest = PostgresContextStore().latest_researched_at()
@@ -237,14 +257,20 @@ def _evaluation_due(interval_hours: float) -> bool:
         )
         return False
 
-    if latest is None:
-        return True
+    content_stale = latest is None or _hours_since(latest) >= interval_hours
+    if not content_stale:
+        return False
 
-    if latest.tzinfo is None:
-        latest = latest.replace(tzinfo=timezone.utc)
+    try:
+        last_attempt = TaskRunStore().last_run_at("evaluation")
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to check evaluation attempt history: "
+            f"{exc!r}[/red]"
+        )
+        return content_stale
 
-    elapsed = datetime.now(timezone.utc) - latest
-    return elapsed.total_seconds() >= interval_hours * 3600
+    return last_attempt is None or _hours_since(last_attempt) >= interval_hours
 
 
 def _dispatch_evaluation_worker(service_manager: RailwayServiceManager) -> None:
