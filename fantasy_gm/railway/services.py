@@ -65,10 +65,26 @@ DATABASE_URL_REFERENCE = os.getenv(
     "${{Postgres.DATABASE_URL}}",
 )
 
+# Deployment statuses that mean "this container actually started and ran
+# to completion" -- as opposed to a deployment that was queued and then
+# abandoned/superseded before it ever ran (see has_actually_finished()).
+# SUCCESS is the obvious case; CRASHED is included too -- confirmed live
+# by matching a CRASHED status against a worker whose logs showed a real
+# Python traceback (the code ran, then the process exited non-zero), not
+# a deployment that never started. Without this, a crashed worker was
+# never recognized as "finished" at all, so it sat around forever
+# occupying a resource slot on Railway's free plan and blocked every
+# subsequent worker launch with "Free plan resource provision limit
+# exceeded" -- observed live as the root cause of a much larger outage
+# than the crash itself.
+_TERMINAL_DEPLOYMENT_STATUSES = {"SUCCESS", "CRASHED"}
+
+
 def has_actually_finished(service: RailwayService) -> bool:
     """
-    True only once a deployment reached SUCCESS (i.e. actually started
-    running) and has since stopped.
+    True only once a deployment reached a terminal status (i.e. actually
+    started running, then stopped -- successfully or not) and has since
+    stopped.
 
     `deploymentStopped` alone is not enough: it is also true for a
     deployment that was queued and then abandoned/superseded before it
@@ -78,7 +94,7 @@ def has_actually_finished(service: RailwayService) -> bool:
     never having started under that deployment id.
     """
     return (
-        service.deployment_status == "SUCCESS"
+        service.deployment_status in _TERMINAL_DEPLOYMENT_STATUSES
         and bool(service.deployment_stopped)
     )
 
