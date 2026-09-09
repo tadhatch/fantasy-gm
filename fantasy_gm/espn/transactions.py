@@ -218,12 +218,45 @@ class ESPNTransactionsClient:
         message: str = "",
         confirm: bool = False,
     ) -> dict | None:
+        # Real transactions of every other type this codebase has pulled
+        # from mTransactions2 (ROSTER/LINEUP moves, WAIVER ADD/DROP) carry
+        # a full item shape: playerId, type, fromTeamId, toTeamId,
+        # fromLineupSlotId, toLineupSlotId, isKeeper, overallPickNumber.
+        # The original propose_trade() only sent playerId/type/fromTeamId/
+        # toTeamId and was confirmed live to fail with ESPN's generic
+        # "Invalid Input" (400) -- this fills in the missing fields to
+        # match that real shape, since a leaner set works for LINEUP
+        # moves (confirmed live) but apparently isn't accepted for TRADE.
+        # fromLineupSlotId is the player's real current slot (looked up
+        # live); toLineupSlotId defaults to BENCH (20) for the acquiring
+        # team, same as this project's own lineup optimizer's constant --
+        # a real acquisition needs a follow-up lineup run regardless of
+        # what slot ESPN records it landing in here. Still an inference
+        # from other transaction types, not a real browser capture of a
+        # trade proposal specifically -- flag it to the user if this
+        # still gets rejected.
+        BENCH_SLOT_ID = 20
+
+        from fantasy_gm.espn.roster import load_all_rosters
+
+        rosters = load_all_rosters(self.client)
+        current_slot: dict[int, int] = {}
+        for roster in rosters.values():
+            for entry in roster.entries:
+                current_slot[entry.player_id] = entry.lineup_slot_id
+
         items = [
             {
                 "playerId": player_id,
                 "type": "TRADE",
                 "fromTeamId": proposing_team_id,
                 "toTeamId": receiving_team_id,
+                "fromLineupSlotId": current_slot.get(
+                    player_id, BENCH_SLOT_ID
+                ),
+                "toLineupSlotId": BENCH_SLOT_ID,
+                "isKeeper": False,
+                "overallPickNumber": 0,
             }
             for player_id in players_offered
         ] + [
@@ -232,6 +265,12 @@ class ESPNTransactionsClient:
                 "type": "TRADE",
                 "fromTeamId": receiving_team_id,
                 "toTeamId": proposing_team_id,
+                "fromLineupSlotId": current_slot.get(
+                    player_id, BENCH_SLOT_ID
+                ),
+                "toLineupSlotId": BENCH_SLOT_ID,
+                "isKeeper": False,
+                "overallPickNumber": 0,
             }
             for player_id in players_requested
         ]
