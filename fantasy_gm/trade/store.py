@@ -27,6 +27,15 @@ CREATE TABLE IF NOT EXISTS incoming_trade_decisions (
     calls_used INTEGER NOT NULL,
     executed BOOLEAN NOT NULL
 );
+
+-- Added after the initial release of this table -- ADD COLUMN IF NOT
+-- EXISTS keeps this safe to run against an already-populated table.
+ALTER TABLE incoming_trade_decisions
+    ADD COLUMN IF NOT EXISTS resolved BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE incoming_trade_decisions
+    ADD COLUMN IF NOT EXISTS offered_to_us_names JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE incoming_trade_decisions
+    ADD COLUMN IF NOT EXISTS requested_from_us_names JSONB NOT NULL DEFAULT '[]';
 """
 
 SCHEMA = """
@@ -139,19 +148,34 @@ class IncomingTradeDecisionStore:
         trade: PendingIncomingTrade,
         team_id: int,
         result: IncomingTradeResult,
+        resolved: bool = True,
     ) -> None:
-        insert = """
+        """
+        Upserts rather than "insert once" -- a trade whose automatic
+        evaluation failed gets an initial resolved=False row, and a
+        later manual resolution (transactions approve/reject) needs to
+        update that same row rather than silently no-op.
+        """
+        upsert = """
             INSERT INTO incoming_trade_decisions (
                 trade_id, team_id, proposing_team_id, proposing_team_name,
-                offered_to_us_ids, requested_from_us_ids, accept,
-                confidence, reasoning, calls_used, executed
+                offered_to_us_ids, offered_to_us_names,
+                requested_from_us_ids, requested_from_us_names, accept,
+                confidence, reasoning, calls_used, executed, resolved
             ) VALUES (
                 %(trade_id)s, %(team_id)s, %(proposing_team_id)s,
                 %(proposing_team_name)s, %(offered_to_us_ids)s,
-                %(requested_from_us_ids)s, %(accept)s, %(confidence)s,
-                %(reasoning)s, %(calls_used)s, %(executed)s
+                %(offered_to_us_names)s, %(requested_from_us_ids)s,
+                %(requested_from_us_names)s, %(accept)s, %(confidence)s,
+                %(reasoning)s, %(calls_used)s, %(executed)s, %(resolved)s
             )
-            ON CONFLICT (trade_id) DO NOTHING
+            ON CONFLICT (trade_id) DO UPDATE SET
+                accept = EXCLUDED.accept,
+                confidence = EXCLUDED.confidence,
+                reasoning = EXCLUDED.reasoning,
+                calls_used = EXCLUDED.calls_used,
+                executed = EXCLUDED.executed,
+                resolved = EXCLUDED.resolved
         """
 
         params = {
@@ -160,16 +184,44 @@ class IncomingTradeDecisionStore:
             "proposing_team_id": trade.proposing_team_id,
             "proposing_team_name": trade.proposing_team_name,
             "offered_to_us_ids": json.dumps(trade.offered_to_us_ids),
+            "offered_to_us_names": json.dumps(trade.offered_to_us_names),
             "requested_from_us_ids": json.dumps(
                 trade.requested_from_us_ids
+            ),
+            "requested_from_us_names": json.dumps(
+                trade.requested_from_us_names
             ),
             "accept": result.accept,
             "confidence": result.confidence,
             "reasoning": result.reasoning,
             "calls_used": result.calls_used,
             "executed": result.executed,
+            "resolved": resolved,
         }
 
         with self._connect() as conn:
-            conn.execute(insert, params)
+            conn.execute(upsert, params)
+            conn.commit()
+
+    def list_unresolved(self) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM incoming_trade_decisions "
+                "WHERE resolved = false ORDER BY created_at ASC"
+            ).fetchall()
+            return list(rows)
+
+    def mark_resolved(self, trade_id: str, *, note: str) -> None:
+        """
+        Clears the unresolved flag without touching ESPN at all -- for a
+        trade that turned out to already be moot (e.g. it finished
+        processing on ESPN's side before its automatic evaluation
+        crashed) rather than one that still needs a real accept/reject.
+        """
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE incoming_trade_decisions "
+                "SET resolved = true, reasoning = %s WHERE trade_id = %s",
+                (note, trade_id),
+            )
             conn.commit()

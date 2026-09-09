@@ -538,6 +538,13 @@ def _check_incoming_trades(
     "is it due" question — any number of distinct pending trades could
     exist at once, so each is tracked independently by its own ESPN
     transaction id rather than a single last-run timestamp.
+
+    Also surfaces any unresolved trade (one whose automatic evaluation
+    crashed and needs manual attention via `fantasy-gm transactions`) --
+    checked unconditionally, not gated on there being anything currently
+    pending on ESPN's side, since a trade that finished processing (or
+    expired) drops out of ESPN's own pending list even though it's still
+    sitting unresolved in our own tracking.
     """
     from fantasy_gm.trade.incoming import (
         find_pending_incoming_trades,
@@ -546,24 +553,37 @@ def _check_incoming_trades(
     from fantasy_gm.trade.store import IncomingTradeDecisionStore
 
     try:
+        decision_store = IncomingTradeDecisionStore()
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to open incoming trade decision store: "
+            f"{exc!r}[/red]"
+        )
+        return
+
+    try:
+        unresolved = decision_store.list_unresolved()
+    except Exception as exc:
+        console.print(
+            f"[red]Failed to check unresolved trades: {exc!r}[/red]"
+        )
+        unresolved = []
+
+    if unresolved:
+        console.print(
+            f"[bold yellow][WORKER][/bold yellow] "
+            f"You have ({len(unresolved)}) unresolved trade "
+            f"transaction{'s' if len(unresolved) != 1 else ''} -- "
+            f"run `fantasy-gm transactions resolve` to review."
+        )
+
+    try:
         pending = find_pending_incoming_trades(
             client, team_id=client.settings.espn_team_id
         )
     except Exception as exc:
         console.print(
             f"[red]Failed to check incoming trades: {exc!r}[/red]"
-        )
-        return
-
-    if not pending:
-        return
-
-    try:
-        decision_store = IncomingTradeDecisionStore()
-    except Exception as exc:
-        console.print(
-            f"[red]Failed to open incoming trade decision store: "
-            f"{exc!r}[/red]"
         )
         return
 

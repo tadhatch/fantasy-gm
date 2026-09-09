@@ -132,8 +132,26 @@ fantasy-gm worker trade [--partner-candidates 3] [--deep-dive-budget 2] [--confi
 # worker per pending trade (shadow by default, live if
 # FANTASY_GM_INCOMING_TRADE_CONFIRM is set):
 fantasy-gm worker list-incoming-trades
-fantasy-gm worker respond-trade --trade-id <id> [--deep-dive-budget 1] [--confirm] [--force-accept]
+fantasy-gm worker respond-trade --trade-id <id> [--deep-dive-budget 1] [--confirm] [--force-accept] [--force-reject]
 ```
+
+### Transactions needing manual attention
+
+If an incoming trade's automatic evaluation crashes (an OpenAI outage,
+hitting a rate limit, etc.), it's recorded as unresolved rather than
+silently retried forever — the supervisor logs `You have (N) unresolved
+trade transaction(s)` on every poll while any exist.
+
+```bash
+fantasy-gm transactions resolve                  # table of everything unresolved
+fantasy-gm transactions approve <id> [--confirm] # accept it directly, no LLM
+fantasy-gm transactions reject <id> [--confirm]  # reject it directly, no LLM
+fantasy-gm transactions dismiss <id>             # mark resolved without telling ESPN anything
+```
+
+Use `dismiss` when the trade already resolved itself on ESPN's side
+(processed, expired, or withdrawn) before the crash — there's nothing
+left to submit, just a stale record to clear.
 
 ### Context / chatbot
 

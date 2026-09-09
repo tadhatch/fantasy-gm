@@ -42,6 +42,11 @@ roster_app = typer.Typer(
     help="Roster reads and roster/waiver/trade transactions",
 )
 app.add_typer(roster_app, name="roster")
+transactions_app = typer.Typer(
+    no_args_is_help=True,
+    help="Manage transactions whose automatic handling needs a human",
+)
+app.add_typer(transactions_app, name="transactions")
 
 
 @app.command()
@@ -866,6 +871,175 @@ def worker_respond_trade(
         f"[green]Calls used: {result.calls_used}. "
         f"Executed live: {result.executed}[/green]"
     )
+
+
+@transactions_app.command("resolve")
+def transactions_resolve() -> None:
+    """
+    List every unresolved transaction -- one whose automatic handling
+    crashed and needs a human to approve, reject, or dismiss it.
+    Currently covers incoming trades only.
+    """
+    from fantasy_gm.trade.incoming import format_trade_side
+    from fantasy_gm.trade.store import IncomingTradeDecisionStore
+
+    rows = IncomingTradeDecisionStore().list_unresolved()
+
+    if not rows:
+        console.print("[green]No unresolved transactions.[/green]")
+        return
+
+    table = Table(title="Unresolved transactions")
+    table.add_column("Transaction ID")
+    table.add_column("Type")
+    table.add_column("From")
+    table.add_column("We'd receive")
+    table.add_column("We'd give up")
+    table.add_column("Why unresolved")
+    for row in rows:
+        table.add_row(
+            row["trade_id"],
+            "TRADE",
+            row["proposing_team_name"],
+            format_trade_side(
+                row.get("offered_to_us_names") or [],
+                row["offered_to_us_ids"],
+            ),
+            format_trade_side(
+                row.get("requested_from_us_names") or [],
+                row["requested_from_us_ids"],
+            ),
+            (row["reasoning"] or "")[:100],
+        )
+    console.print(table)
+    console.print(
+        "\nResolve one with `fantasy-gm transactions approve <id>` / "
+        "`reject <id>` [--confirm], or "
+        "`fantasy-gm transactions dismiss <id>` if it's already moot."
+    )
+
+
+def _resolve_unresolved_trade(trade_id: str) -> dict:
+    from fantasy_gm.trade.store import IncomingTradeDecisionStore
+
+    rows = IncomingTradeDecisionStore().list_unresolved()
+    row = next((r for r in rows if r["trade_id"] == trade_id), None)
+    if row is None:
+        console.print(
+            f"[red]No unresolved transaction found with id "
+            f"{trade_id}[/red] (see `fantasy-gm transactions resolve`)"
+        )
+        raise typer.Exit(1)
+    return row
+
+
+@transactions_app.command("approve")
+def transactions_approve(
+    trade_id: str = typer.Argument(..., help="Transaction id to approve"),
+    team_id: int | None = typer.Option(
+        None, "--team-id", help="Defaults to your configured team"
+    ),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+) -> None:
+    """
+    Manually accept an unresolved incoming trade, bypassing the LLM
+    entirely, and mark it resolved.
+    """
+    from fantasy_gm.trade.incoming import force_respond_to_trade
+    from fantasy_gm.trade.models import PendingIncomingTrade
+
+    row = _resolve_unresolved_trade(trade_id)
+    settings = get_settings()
+    client = ESPNClient(settings)
+
+    trade = PendingIncomingTrade(
+        trade_id=row["trade_id"],
+        proposing_team_id=row["proposing_team_id"],
+        proposing_team_name=row["proposing_team_name"],
+        offered_to_us_ids=row["offered_to_us_ids"],
+        offered_to_us_names=row.get("offered_to_us_names") or [],
+        requested_from_us_ids=row["requested_from_us_ids"],
+        requested_from_us_names=row.get("requested_from_us_names") or [],
+    )
+
+    result = force_respond_to_trade(
+        client,
+        team_id=team_id or settings.espn_team_id,
+        trade=trade,
+        accept=True,
+        confirm=confirm,
+    )
+    console.print(
+        f"[green]Approved {trade_id}. Executed live: "
+        f"{result.executed}[/green]"
+    )
+
+
+@transactions_app.command("reject")
+def transactions_reject(
+    trade_id: str = typer.Argument(..., help="Transaction id to reject"),
+    team_id: int | None = typer.Option(
+        None, "--team-id", help="Defaults to your configured team"
+    ),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+) -> None:
+    """
+    Manually reject an unresolved incoming trade, bypassing the LLM
+    entirely, and mark it resolved.
+    """
+    from fantasy_gm.trade.incoming import force_respond_to_trade
+    from fantasy_gm.trade.models import PendingIncomingTrade
+
+    row = _resolve_unresolved_trade(trade_id)
+    settings = get_settings()
+    client = ESPNClient(settings)
+
+    trade = PendingIncomingTrade(
+        trade_id=row["trade_id"],
+        proposing_team_id=row["proposing_team_id"],
+        proposing_team_name=row["proposing_team_name"],
+        offered_to_us_ids=row["offered_to_us_ids"],
+        offered_to_us_names=row.get("offered_to_us_names") or [],
+        requested_from_us_ids=row["requested_from_us_ids"],
+        requested_from_us_names=row.get("requested_from_us_names") or [],
+    )
+
+    result = force_respond_to_trade(
+        client,
+        team_id=team_id or settings.espn_team_id,
+        trade=trade,
+        accept=False,
+        confirm=confirm,
+    )
+    console.print(
+        f"[green]Rejected {trade_id}. Executed live: "
+        f"{result.executed}[/green]"
+    )
+
+
+@transactions_app.command("dismiss")
+def transactions_dismiss(
+    trade_id: str = typer.Argument(..., help="Transaction id to dismiss"),
+) -> None:
+    """
+    Mark an unresolved transaction resolved WITHOUT submitting anything
+    to ESPN -- for one that already resolved itself on ESPN's side
+    (expired, withdrawn, or processed) before its automatic evaluation
+    crashed, so there's genuinely nothing left to submit.
+    """
+    from fantasy_gm.trade.incoming import dismiss_incoming_trade
+
+    _resolve_unresolved_trade(trade_id)
+    dismiss_incoming_trade(trade_id)
+    console.print(f"[green]Dismissed {trade_id}.[/green]")
 
 
 @worker_app.command("lineup")

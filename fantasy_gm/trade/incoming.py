@@ -140,9 +140,16 @@ def find_pending_incoming_trades(
 
 
 def format_trade_side(names: list[str], ids: list[int]) -> str:
-    """Shared "Name (id), Name (id)" formatting for CLI/log display."""
+    """
+    Shared "Name (id), Name (id)" formatting for CLI/log display. Falls
+    back to bare ids if names is shorter than ids (or empty) -- e.g. a
+    row recorded before offered/requested_*_names existed, backfilled to
+    '[]' by the migration rather than real data.
+    """
     if not ids:
         return "-"
+    if len(names) < len(ids):
+        return ", ".join(str(pid) for pid in ids)
     return ", ".join(f"{name} ({pid})" for name, pid in zip(names, ids))
 
 
@@ -338,9 +345,10 @@ def evaluate_incoming_trade(
                 f"retried: {exc!r}. Resolve manually with `worker "
                 f"respond-trade --trade-id {trade.trade_id} "
                 "--force-accept` or `--force-reject` (plus --confirm to "
-                "actually submit), or delete this trade's row from "
-                "incoming_trade_decisions to allow another automatic "
-                "attempt."
+                "actually submit), or `fantasy-gm transactions dismiss "
+                f"{trade.trade_id}` if it's already moot. Run "
+                "`fantasy-gm transactions resolve` to see all unresolved "
+                "trades."
             ),
             deep_dives_used=[],
             calls_used=calls_used,
@@ -348,7 +356,10 @@ def evaluate_incoming_trade(
         )
         try:
             decision_store.record(
-                trade=trade, team_id=team_id, result=failure_result
+                trade=trade,
+                team_id=team_id,
+                result=failure_result,
+                resolved=False,
             )
         except Exception:
             logger.exception(
@@ -414,3 +425,19 @@ def force_respond_to_trade(
         )
 
     return result
+
+
+def dismiss_incoming_trade(
+    trade_id: str,
+    *,
+    note: str = "Manually dismissed without submitting anything to ESPN.",
+    decision_store: IncomingTradeDecisionStore | None = None,
+) -> None:
+    """
+    Clears the unresolved flag on a trade without touching ESPN at all --
+    for the case where a trade already resolved itself on ESPN's side
+    (expired, withdrawn, or processed) before its automatic evaluation
+    crashed, so there's genuinely nothing left to submit.
+    """
+    decision_store = decision_store or IncomingTradeDecisionStore()
+    decision_store.mark_resolved(trade_id, note=note)
