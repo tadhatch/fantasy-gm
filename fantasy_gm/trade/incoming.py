@@ -240,76 +240,122 @@ def evaluate_incoming_trade(
             )
         return payload
 
-    stage1 = call_structured_json(
-        model=reasoning_model,
-        system=INCOMING_TRADE_SYSTEM.format(deep_dive_budget=deep_dive_budget),
-        user=(
-            f"Proposing team: {trade.proposing_team_name}\n\n"
-            f"Our current roster:\n{json.dumps(roster_payload, indent=2)}\n\n"
-            f"Players we would RECEIVE:\n"
-            f"{json.dumps(_side_payload(trade.offered_to_us_ids), indent=2)}\n\n"
-            f"Players we would GIVE UP:\n"
-            f"{json.dumps(_side_payload(trade.requested_from_us_ids), indent=2)}\n\n"
-            "Return JSON:\n"
-            "{\n"
-            '  "accept": boolean,\n'
-            '  "confidence": number 0 to 1,\n'
-            '  "reasoning": "one or two sentences",\n'
-            '  "deep_dive_requests": '
-            f'[{{"espn_id": int, "name": str, "reason": str}}] '
-            f"(at most {deep_dive_budget})\n"
-            "}"
-        ),
-    )
-    calls_used += 1
-
-    accept = bool(stage1.get("accept", False))
-    confidence = float(stage1.get("confidence", 0.0))
-    reasoning = str(stage1.get("reasoning", ""))
-
-    deep_dive_requests = [
-        DeepDiveRequest(
-            espn_id=int(r["espn_id"]),
-            name=str(r.get("name", "")),
-            reason=str(r.get("reason", "")),
+    try:
+        stage1 = call_structured_json(
+            model=reasoning_model,
+            system=INCOMING_TRADE_SYSTEM.format(
+                deep_dive_budget=deep_dive_budget
+            ),
+            user=(
+                f"Proposing team: {trade.proposing_team_name}\n\n"
+                f"Our current roster:\n{json.dumps(roster_payload, indent=2)}\n\n"
+                f"Players we would RECEIVE:\n"
+                f"{json.dumps(_side_payload(trade.offered_to_us_ids), indent=2)}\n\n"
+                f"Players we would GIVE UP:\n"
+                f"{json.dumps(_side_payload(trade.requested_from_us_ids), indent=2)}\n\n"
+                "Return JSON:\n"
+                "{\n"
+                '  "accept": boolean,\n'
+                '  "confidence": number 0 to 1,\n'
+                '  "reasoning": "one or two sentences",\n'
+                '  "deep_dive_requests": '
+                f'[{{"espn_id": int, "name": str, "reason": str}}] '
+                f"(at most {deep_dive_budget})\n"
+                "}"
+            ),
         )
-        for r in stage1.get("deep_dive_requests", [])[:deep_dive_budget]
-        if isinstance(r, dict) and "espn_id" in r
-    ]
-
-    for request in deep_dive_requests:
-        info = player_info.get(request.espn_id, {})
-        routed = router.terra.research(
-            espn_id=request.espn_id,
-            player_name=info.get("name", request.name),
-            position=info.get("position", "?"),
-            nfl_team=None,
-            quantitative_context={"deep_dive_reason": request.reason},
-        )
-        store.put(routed)
         calls_used += 1
 
-    executed = False
-    if attempt_transaction:
-        txn = ESPNTransactionsClient(client)
-        response = txn.respond_to_trade(
-            team_id=team_id,
-            trade_id=trade.trade_id,
-            accept=accept,
-            scoring_period_id=current_scoring_period(client),
-            confirm=confirm,
-        )
-        executed = response is not None
+        accept = bool(stage1.get("accept", False))
+        confidence = float(stage1.get("confidence", 0.0))
+        reasoning = str(stage1.get("reasoning", ""))
 
-    result = IncomingTradeResult(
-        trade=trade,
-        accept=accept,
-        confidence=confidence,
-        reasoning=reasoning,
-        deep_dives_used=deep_dive_requests,
-        calls_used=calls_used,
-        executed=executed,
-    )
+        deep_dive_requests = [
+            DeepDiveRequest(
+                espn_id=int(r["espn_id"]),
+                name=str(r.get("name", "")),
+                reason=str(r.get("reason", "")),
+            )
+            for r in stage1.get("deep_dive_requests", [])[:deep_dive_budget]
+            if isinstance(r, dict) and "espn_id" in r
+        ]
+
+        for request in deep_dive_requests:
+            info = player_info.get(request.espn_id, {})
+            routed = router.terra.research(
+                espn_id=request.espn_id,
+                player_name=info.get("name", request.name),
+                position=info.get("position", "?"),
+                nfl_team=None,
+                quantitative_context={"deep_dive_reason": request.reason},
+            )
+            store.put(routed)
+            calls_used += 1
+
+        executed = False
+        if attempt_transaction:
+            txn = ESPNTransactionsClient(client)
+            response = txn.respond_to_trade(
+                team_id=team_id,
+                trade_id=trade.trade_id,
+                accept=accept,
+                scoring_period_id=current_scoring_period(client),
+                confirm=confirm,
+            )
+            executed = response is not None
+
+        result = IncomingTradeResult(
+            trade=trade,
+            accept=accept,
+            confidence=confidence,
+            reasoning=reasoning,
+            deep_dives_used=deep_dive_requests,
+            calls_used=calls_used,
+            executed=executed,
+        )
+    except Exception as exc:
+        # Record even on failure -- otherwise has_decided() stays False
+        # forever and the supervisor's poll loop treats this trade as
+        # brand new on every single cycle, re-dispatching a worker that
+        # will just fail the same way again, with no backoff at all
+        # (this is exactly what happened live: an OpenAI quota error
+        # turned into an infinite crash-loop). A failure is recorded as
+        # accept=False/executed=False with a distinguishing reasoning
+        # message rather than a real judgment, which is enough to stop
+        # the automatic retries -- resolving it for real still requires
+        # a human, via --force-accept/--force-reject --confirm, or by
+        # deleting the row from incoming_trade_decisions to allow one
+        # more automatic attempt.
+        logger.exception(
+            "incoming trade: evaluation failed for %s", trade.trade_id
+        )
+        failure_result = IncomingTradeResult(
+            trade=trade,
+            accept=False,
+            confidence=0.0,
+            reasoning=(
+                f"ERROR: automatic evaluation failed and was not "
+                f"retried: {exc!r}. Resolve manually with `worker "
+                f"respond-trade --trade-id {trade.trade_id} "
+                "--force-accept` or `--force-reject` (plus --confirm to "
+                "actually submit), or delete this trade's row from "
+                "incoming_trade_decisions to allow another automatic "
+                "attempt."
+            ),
+            deep_dives_used=[],
+            calls_used=calls_used,
+            executed=False,
+        )
+        try:
+            decision_store.record(
+                trade=trade, team_id=team_id, result=failure_result
+            )
+        except Exception:
+            logger.exception(
+                "incoming trade: failed to record FAILURE decision for %s",
+                trade.trade_id,
+            )
+        raise
 
     try:
         decision_store.record(trade=trade, team_id=team_id, result=result)

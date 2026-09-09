@@ -779,6 +779,11 @@ def worker_respond_trade(
         "--force-accept",
         help="Bypass the LLM evaluation entirely and just accept -- for testing the transaction mechanics in isolation, not real decision-making",
     ),
+    force_reject: bool = typer.Option(
+        False,
+        "--force-reject",
+        help="Bypass the LLM evaluation entirely and just reject -- also useful for manually resolving a trade whose automatic evaluation failed",
+    ),
 ) -> None:
     """
     Evaluate ONE specific pending incoming trade and decide accept/
@@ -808,16 +813,24 @@ def worker_respond_trade(
         )
         raise typer.Exit(1)
 
-    if force_accept:
+    if force_accept and force_reject:
         console.print(
-            "[yellow]--force-accept: bypassing evaluation, "
-            "accepting directly.[/yellow]"
+            "[red]--force-accept and --force-reject are mutually "
+            "exclusive.[/red]"
+        )
+        raise typer.Exit(1)
+
+    if force_accept or force_reject:
+        action = "accepting" if force_accept else "rejecting"
+        console.print(
+            f"[yellow]--force-{'accept' if force_accept else 'reject'}: "
+            f"bypassing evaluation, {action} directly.[/yellow]"
         )
         result = force_respond_to_trade(
             client,
             team_id=resolved_team_id,
             trade=trade,
-            accept=True,
+            accept=force_accept,
             confirm=confirm,
         )
     else:
