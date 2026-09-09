@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from rich.console import Console
 
@@ -216,47 +217,22 @@ class ESPNTransactionsClient:
         players_requested: list[int],
         scoring_period_id: int,
         message: str = "",
+        expiration_days: int = 2,
         confirm: bool = False,
     ) -> dict | None:
-        # Real transactions of every other type this codebase has pulled
-        # from mTransactions2 (ROSTER/LINEUP moves, WAIVER ADD/DROP) carry
-        # a full item shape: playerId, type, fromTeamId, toTeamId,
-        # fromLineupSlotId, toLineupSlotId, isKeeper, overallPickNumber.
-        # The original propose_trade() only sent playerId/type/fromTeamId/
-        # toTeamId and was confirmed live to fail with ESPN's generic
-        # "Invalid Input" (400) -- this fills in the missing fields to
-        # match that real shape, since a leaner set works for LINEUP
-        # moves (confirmed live) but apparently isn't accepted for TRADE.
-        # fromLineupSlotId is the player's real current slot (looked up
-        # live); toLineupSlotId defaults to BENCH (20) for the acquiring
-        # team, same as this project's own lineup optimizer's constant --
-        # a real acquisition needs a follow-up lineup run regardless of
-        # what slot ESPN records it landing in here. Still an inference
-        # from other transaction types, not a real browser capture of a
-        # trade proposal specifically -- flag it to the user if this
-        # still gets rejected.
-        BENCH_SLOT_ID = 20
-
-        from fantasy_gm.espn.roster import load_all_rosters
-
-        rosters = load_all_rosters(self.client)
-        current_slot: dict[int, int] = {}
-        for roster in rosters.values():
-            for entry in roster.entries:
-                current_slot[entry.player_id] = entry.lineup_slot_id
-
+        # Confirmed against a real browser capture of a successful
+        # TRADE_PROPOSAL: items carry only playerId/type/fromTeamId/
+        # toTeamId (no lineup-slot/keeper/pick fields -- those belong to
+        # ROSTER/LINEUP moves, not trades), the free-text field is named
+        # "comment" (not "message"), and ESPN requires an "expirationDate"
+        # (ISO 8601, milliseconds, "Z" suffix) or it rejects the whole
+        # request with a generic "Invalid Input" (400).
         items = [
             {
                 "playerId": player_id,
                 "type": "TRADE",
                 "fromTeamId": proposing_team_id,
                 "toTeamId": receiving_team_id,
-                "fromLineupSlotId": current_slot.get(
-                    player_id, BENCH_SLOT_ID
-                ),
-                "toLineupSlotId": BENCH_SLOT_ID,
-                "isKeeper": False,
-                "overallPickNumber": 0,
             }
             for player_id in players_offered
         ] + [
@@ -265,15 +241,16 @@ class ESPNTransactionsClient:
                 "type": "TRADE",
                 "fromTeamId": receiving_team_id,
                 "toTeamId": proposing_team_id,
-                "fromLineupSlotId": current_slot.get(
-                    player_id, BENCH_SLOT_ID
-                ),
-                "toLineupSlotId": BENCH_SLOT_ID,
-                "isKeeper": False,
-                "overallPickNumber": 0,
             }
             for player_id in players_requested
         ]
+
+        expiration = datetime.now(timezone.utc) + timedelta(
+            days=expiration_days
+        )
+        expiration_date = expiration.isoformat(
+            timespec="milliseconds"
+        ).replace("+00:00", "Z")
 
         body = {
             "isLeagueManager": False,
@@ -282,8 +259,9 @@ class ESPNTransactionsClient:
             "memberId": self.client.settings.espn_swid,
             "scoringPeriodId": scoring_period_id,
             "executionType": "EXECUTE",
-            "message": message,
             "items": items,
+            "expirationDate": expiration_date,
+            "comment": message,
         }
 
         label = (
