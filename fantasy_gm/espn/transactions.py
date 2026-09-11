@@ -54,7 +54,10 @@ class LineupMove:
 
 
 class TransactionRejected(ESPNError):
-    pass
+    def __init__(self, message: str, *, status_code: int, body: str):
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body
 
 
 class ESPNTransactionsClient:
@@ -112,7 +115,9 @@ class ESPNTransactionsClient:
         if not response.ok:
             raise TransactionRejected(
                 f"ESPN rejected {label} "
-                f"({response.status_code}): {response.text[:500]}"
+                f"({response.status_code}): {response.text[:500]}",
+                status_code=response.status_code,
+                body=response.text,
             )
 
         console.print(
@@ -170,6 +175,58 @@ class ESPNTransactionsClient:
         if add_player_id is None and drop_player_id is None:
             raise ValueError("add_drop requires at least one of add/drop")
 
+        try:
+            return self._add_drop_once(
+                team_id=team_id,
+                add_player_id=add_player_id,
+                drop_player_id=drop_player_id,
+                scoring_period_id=scoring_period_id,
+                via_waiver=via_waiver,
+                bid_amount=bid_amount,
+                confirm=confirm,
+            )
+        except TransactionRejected as exc:
+            # Whoever set via_waiver (the waiver pipeline's GM-decision
+            # stage is an LLM guess; a human CLI caller can be wrong too)
+            # has no real way to know a player's live waiver status --
+            # ESPN's own rejection is the authoritative answer. Confirmed
+            # live: claiming a player who has already cleared waivers
+            # gets a 409 with details[].type "TRAN_PLAYER_NOT_WAIVERS".
+            # Retry once as a plain free-agent add instead of crashing
+            # the whole run over a stale/wrong guess.
+            if (
+                not via_waiver
+                or exc.status_code != 409
+                or "TRAN_PLAYER_NOT_WAIVERS" not in exc.body
+            ):
+                raise
+
+            console.print(
+                f"[yellow][TRANSACTIONS][/yellow] add {add_player_id} "
+                "rejected as a waiver claim (player already cleared "
+                "waivers) -- retrying as a free-agent add"
+            )
+            return self._add_drop_once(
+                team_id=team_id,
+                add_player_id=add_player_id,
+                drop_player_id=drop_player_id,
+                scoring_period_id=scoring_period_id,
+                via_waiver=False,
+                bid_amount=None,
+                confirm=confirm,
+            )
+
+    def _add_drop_once(
+        self,
+        *,
+        team_id: int,
+        add_player_id: int | None,
+        drop_player_id: int | None,
+        scoring_period_id: int,
+        via_waiver: bool,
+        bid_amount: int | None,
+        confirm: bool,
+    ) -> dict | None:
         items = []
 
         if add_player_id is not None:
