@@ -53,27 +53,79 @@ Return ONLY valid JSON matching the requested schema. No markdown.
 DECISION_REASONING_SYSTEM = """
 You are the decision-reasoning stage for an autonomous fantasy football
 GM. Given a roster analysis and a shortlist of free agents, reason
-about actual ADD -> DROP combinations: opportunity cost of the drop,
-upside of the add, remaining schedule, roster construction (not just
-"is the add better than the drop in a vacuum"), and waiver priority
-cost if relevant. You may request up to {deep_dive_budget} deep-dive
-research calls (fresh web search) on specific players — from either the
-shortlist or the roster — if resolving real uncertainty about them
-would change your recommendation (major injury news, a big recent game,
-a hot/cold streak, a role change, a contract/trade story). Only request
-one where it would actually change the decision; do not request one for
-every player.
+about actual ADD -> DROP combinations. The default expectation is that
+most evaluations surface no move worth making — only propose a
+candidate when the swap is defensible as a genuine roster improvement,
+not just "the free agent's projection edges out a bench player's."
+
+For each ADD candidate, weigh: current-week value, expected value over
+the next 3-4 weeks, and rest-of-season value; expected role and
+opportunity (snap share, target/carry/route share, red-zone usage);
+whether an injury-created opportunity is temporary or sustainable;
+depth-chart security; remaining strength of schedule and fantasy
+playoff schedule when relevant; positional scarcity; upside versus
+floor; and whether the player could become a real starter or is just
+useful bench depth, injury insurance, or breakout upside.
+
+For each proposed DROP, independently weigh the same kind of
+opportunity cost: the dropped player's own rest-of-season value, role
+security, upside, bye-week usefulness, and the odds you'd regret
+losing them later — not just whether they project worse than the add
+this week. The comparison that matters is the roster's value AFTER the
+swap versus its value BEFORE it, including waiver priority or FAAB
+cost if relevant — not a one-week, one-player projection gap.
+
+You may request up to {deep_dive_budget} deep-dive research calls
+(fresh web search) on specific players — from either the shortlist or
+the roster — if resolving real uncertainty about them would change
+your recommendation (major injury news, a big recent game, a hot/cold
+streak, a role change, a contract/trade story). Only request one where
+it would actually change the decision; do not request one for every
+player.
 Return ONLY valid JSON matching the requested schema. No markdown.
 """
 
 GM_DECISION_SYSTEM = """
 You are the final decision stage for an autonomous fantasy football GM.
 You are given the prior reasoning and any fresh deep-dive research.
-Your only job is to convert that into ONE strict, actionable decision.
+
+The default, expected outcome of this stage is NO_MOVE. A scheduled
+evaluation running is not itself a reason to transact — most days
+should end with the roster unchanged. Only recommend action="add_drop"
+when you can articulate why it is a MATERIAL improvement to the
+roster, not merely that the best available free agent edges out the
+worst rostered player this week.
+
+Reason across horizons — this week, the next 3-4 weeks, and rest of
+season — and set material_upgrade=true only when the improvement holds
+up across them, or when a specific, real short-term roster need (a
+bye, an injury, an empty starting slot, a genuinely bad matchup)
+justifies weighing the short term more heavily; when that's the case,
+say so via addresses_roster_need=true. Compare the roster AFTER the
+swap to the roster BEFORE it (the add's value minus the real
+opportunity cost of the drop) — not simply "is the add better than the
+drop this week." Do not recommend swapping similar low-upside bench
+players, chasing a single good box score without evidence of changed
+opportunity, or spending waiver priority / FAAB on a marginal gain.
+
 Do not re-litigate the reasoning — pick the single best candidate move,
 or decide no move is worth making this run. Be decisive and terse.
 Return ONLY valid JSON matching the requested schema. No markdown.
 """
+
+# Deterministic backstop applied to whatever the GM-decision stage
+# returns (see _gate_transaction below). An LLM call is necessary but
+# not sufficient to authorize spending a roster move -- these floors
+# are what actually decide whether a proposed add/drop reaches ESPN.
+# The philosophy: 11:30 is when the bot checks whether it should make
+# a move, not the reason it makes one -- NO_MOVE is always the
+# default, and a transaction needs quantified evidence of a real
+# rest-of-season improvement (or a specific, stated short-term roster
+# need) to overcome it.
+MIN_CONFIDENCE = 0.55
+MIN_CONFIDENCE_FOR_ACQUISITION_COST = 0.65
+FREE_PICKUP_ROS_FLOOR = 0.5
+COSTLY_PICKUP_ROS_FLOOR = 2.0
 
 
 def run_waiver_pipeline(
@@ -235,6 +287,11 @@ def _run_waiver_pipeline_body(
     )
     calls_used += 1
     shortlist = _parse_shortlist(stage2)
+    if not shortlist:
+        logger.info(
+            "waiver: evaluation ran, no free agents worth evaluating "
+            "this run"
+        )
 
     # Stage 3: deep evaluation / decision reasoning.
     stage3 = call_structured_json(
@@ -261,6 +318,11 @@ def _run_waiver_pipeline_body(
     deep_dive_requests = _parse_deep_dive_requests(
         stage3, budget=deep_dive_budget
     )
+    if not candidate_moves:
+        logger.info(
+            "waiver: evaluation ran, no candidate add/drop combination "
+            "worth reasoning further about"
+        )
 
     # Reserve budget: fresh web-search research on specifically
     # requested players only — not a blanket per-player sweep.
@@ -296,6 +358,19 @@ def _run_waiver_pipeline_body(
             '  "drop_player_name": str|null,\n'
             '  "use_waiver": bool,\n'
             '  "faab_bid": int|null,\n'
+            '  "material_upgrade": bool (true only if this is a '
+            "genuine, defensible roster improvement, not just a "
+            "marginal projection edge),\n"
+            '  "current_week_delta": number '
+            "(expected points added this week, add minus drop),\n"
+            '  "next_4_weeks_delta": number '
+            "(expected points added over the next 3-4 weeks),\n"
+            '  "ros_value_delta": number (net rest-of-season roster '
+            "value change -- the add's ongoing value minus the real "
+            "opportunity cost of losing the drop),\n"
+            '  "addresses_roster_need": bool (true only for a '
+            "specific, real short-term need -- a bye, injury, empty "
+            "slot, or bad matchup -- not a routine upgrade),\n"
             '  "confidence": number 0 to 1,\n'
             '  "reasoning": "one or two sentences"\n'
             "}"
@@ -305,27 +380,73 @@ def _run_waiver_pipeline_body(
     decision = _parse_decision(stage4)
 
     executed = False
-    if (
-        attempt_transaction
-        and decision.action == "add_drop"
-        and decision.add_player_id
-    ):
-        txn = ESPNTransactionsClient(client)
-        # The GM-decision stage isn't told whether this league runs FAAB
-        # or traditional priority waivers, so it can propose a bid amount
-        # that doesn't apply here — this league uses priority waivers
-        # (isUsingAcquisitionBudget is False), so a bid is meaningless and
-        # is dropped before it ever reaches ESPN, regardless of what the
-        # LLM guessed. The recorded decision (decision_store.record(), in
-        # run_waiver_pipeline() once this returns) still keeps whatever
-        # the LLM originally proposed, for audit purposes -- only the
-        # actual submission is corrected.
-        # `confirm` is the same double gate as every other transaction:
-        # the caller must pass it AND FANTASY_GM_TRANSACTIONS_MODE must be
-        # live, or this always just shadow-logs.
-        bid_amount = (
-            decision.faab_bid if _league_uses_faab(client) else None
+    if decision.action != "add_drop" or not decision.add_player_id:
+        logger.info(
+            "waiver: evaluation complete -- no candidate move "
+            "recommended (NO_MOVE): %s",
+            decision.reasoning or "no shortlisted player cleared screening",
         )
+        return WaiverRunResult(
+            roster_analysis=roster_analysis,
+            shortlist=shortlist,
+            candidate_moves=candidate_moves,
+            deep_dives_used=deep_dive_requests,
+            decision=decision,
+            calls_used=calls_used,
+            executed=executed,
+        )
+
+    # The GM-decision stage isn't told whether this league runs FAAB or
+    # traditional priority waivers, so it can propose a bid amount that
+    # doesn't apply here — this league uses priority waivers
+    # (isUsingAcquisitionBudget is False), so a bid is meaningless and is
+    # dropped before it ever reaches ESPN, regardless of what the LLM
+    # guessed. The recorded decision (decision_store.record(), in
+    # run_waiver_pipeline() once this returns) still keeps whatever the
+    # LLM originally proposed, for audit purposes -- only the actual
+    # submission is corrected.
+    league_uses_faab = _league_uses_faab(client)
+    bid_amount = decision.faab_bid if league_uses_faab else None
+    spends_acquisition_cost = decision.use_waiver or bool(bid_amount)
+
+    allowed, rejection_category = _gate_transaction(
+        decision, spends_acquisition_cost=spends_acquisition_cost
+    )
+
+    if not allowed:
+        logger.info(
+            "waiver: candidate rejected (%s) -- add %s / drop %s not "
+            "submitted: %s",
+            rejection_category,
+            decision.add_player_name,
+            decision.drop_player_name,
+            decision.reasoning,
+        )
+        decision.action = "no_move"
+        return WaiverRunResult(
+            roster_analysis=roster_analysis,
+            shortlist=shortlist,
+            candidate_moves=candidate_moves,
+            deep_dives_used=deep_dive_requests,
+            decision=decision,
+            calls_used=calls_used,
+            executed=executed,
+        )
+
+    logger.info(
+        "waiver: material upgrade confirmed -- add %s / drop %s "
+        "(confidence %.2f): %s",
+        decision.add_player_name,
+        decision.drop_player_name,
+        decision.confidence,
+        decision.reasoning,
+    )
+
+    # `confirm` is the same double gate as every other transaction: the
+    # caller must pass it AND FANTASY_GM_TRANSACTIONS_MODE must be live,
+    # or this always just shadow-logs.
+    if attempt_transaction:
+        txn = ESPNTransactionsClient(client)
         response = txn.add_drop(
             team_id=team_id,
             add_player_id=decision.add_player_id,
@@ -336,6 +457,12 @@ def _run_waiver_pipeline_body(
             confirm=confirm,
         )
         executed = response is not None
+        if executed:
+            logger.info(
+                "waiver: transaction submitted -- add %s / drop %s",
+                decision.add_player_name,
+                decision.drop_player_name,
+            )
 
     return WaiverRunResult(
         roster_analysis=roster_analysis,
@@ -362,6 +489,65 @@ def _league_uses_faab(client: ESPNClient) -> bool:
             "assuming no FAAB bid"
         )
         return False
+
+
+def _gate_transaction(
+    decision: GMDecision, *, spends_acquisition_cost: bool
+) -> tuple[bool, str | None]:
+    """
+    Deterministic backstop on top of the GM-decision stage's own
+    material_upgrade claim, so the LLM is never solely responsible for
+    deciding whether a transaction is submitted.
+
+    Returns (allowed, rejection_category). rejection_category is None
+    when allowed, otherwise one of:
+      - "not_material": the GM-decision stage itself didn't claim this
+        was a genuine improvement.
+      - "low_confidence": the stage wasn't confident enough in its own
+        read, material_upgrade claim aside.
+      - "drop_cost_too_high": the swap makes the roster worse over the
+        rest of the season once the drop's opportunity cost is netted
+        out, and no specific short-term need justifies that.
+      - "one_week_only": a free-agent pickup whose apparent gain
+        doesn't clear a real, lasting rest-of-season bar -- churn, not
+        improvement.
+      - "acquisition_cost_too_high": submitting would spend waiver
+        priority or FAAB on a gain too marginal to justify that cost.
+    """
+    if not decision.material_upgrade:
+        return False, "not_material"
+
+    if decision.confidence < MIN_CONFIDENCE:
+        return False, "low_confidence"
+
+    short_term_need = decision.addresses_roster_need and (
+        decision.current_week_delta > 0 or decision.next_4_weeks_delta > 0
+    )
+
+    if not short_term_need:
+        if decision.ros_value_delta < 0:
+            return False, "drop_cost_too_high"
+
+        floor = (
+            COSTLY_PICKUP_ROS_FLOOR
+            if spends_acquisition_cost
+            else FREE_PICKUP_ROS_FLOOR
+        )
+        if decision.ros_value_delta < floor:
+            category = (
+                "acquisition_cost_too_high"
+                if spends_acquisition_cost
+                else "one_week_only"
+            )
+            return False, category
+
+    if (
+        spends_acquisition_cost
+        and decision.confidence < MIN_CONFIDENCE_FOR_ACQUISITION_COST
+    ):
+        return False, "acquisition_cost_too_high"
+
+    return True, None
 
 
 def _roster_payload(roster, cached_context) -> list[dict]:
@@ -552,5 +738,12 @@ def _parse_decision(data: dict) -> GMDecision:
         use_waiver=bool(data.get("use_waiver", False)),
         faab_bid=data.get("faab_bid"),
         confidence=float(data.get("confidence", 0.0)),
+        material_upgrade=bool(data.get("material_upgrade", False)),
+        current_week_delta=float(data.get("current_week_delta", 0.0)),
+        next_4_weeks_delta=float(data.get("next_4_weeks_delta", 0.0)),
+        ros_value_delta=float(data.get("ros_value_delta", 0.0)),
+        addresses_roster_need=bool(
+            data.get("addresses_roster_need", False)
+        ),
         reasoning=str(data.get("reasoning", "")),
     )
