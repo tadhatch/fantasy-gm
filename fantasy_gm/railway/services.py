@@ -58,6 +58,15 @@ SHARED_VARIABLES = [
     "FANTASY_GM_AVAILABILITY_MAX_AGE_MINUTES",
     "FANTASY_GM_LINEUP_MAX_REPAIR_ATTEMPTS",
     "FANTASY_GM_LOG_LEVEL",
+    # Emergency roster repair (fantasy_gm/repair), run inside the lineup
+    # worker.
+    "FANTASY_GM_REPAIR_ENABLED",
+    "FANTASY_GM_REPAIR_CONFIRM",
+    "FANTASY_GM_REPAIR_DROP_STRATEGY",
+    "FANTASY_GM_REPAIR_SAME_POSITION_MARGIN",
+    "FANTASY_GM_REPAIR_MIN_VALUE_DELTA",
+    "FANTASY_GM_REPAIR_WAIVER_LEAD_MINUTES",
+    "FANTASY_GM_IR_ELIGIBLE_STATUSES",
 ]
 
 # A cross-service reference to the Postgres plugin, set directly on each

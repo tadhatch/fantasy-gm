@@ -72,6 +72,13 @@ trusting it to also respond to one.
     as starters, and the lineup is re-validated against a fresh ESPN
     read immediately before submission. The transactions client refuses
     any lineup that didn't pass it.
+  - when a required starting slot can't be filled by anyone on the
+    roster (every eligible player out or on bye), the lineup worker runs
+    deterministic emergency roster repair (`fantasy_gm/repair`): the
+    best free agent/waiver player who can actually play in time, using
+    an open roster or IR spot before dropping the least valuable
+    expendable player. Shadowed unless `FANTASY_GM_REPAIR_CONFIRM` is
+    set; manual run: `fantasy-gm worker repair`.
   - the waiver worker fires once daily, a fixed buffer after this
     league's own waiver-processing hour — read live from ESPN's own
     settings (`acquisitionSettings.waiverProcessHour`), not hardcoded, so

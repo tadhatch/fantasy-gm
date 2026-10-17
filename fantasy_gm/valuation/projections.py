@@ -143,3 +143,54 @@ def extract_dst_week_projection(
         return None
 
     return estimate_dst_points(row.get("stats") or {})
+
+
+def extract_ros_projection(
+    entry: dict[str, Any], *, season: int
+) -> float | None:
+    """
+    Rest-of-season points ESTIMATE: ESPN's current full-season projection
+    (statSourceId 1, scoringPeriodId 0, statSplitTypeId 0) minus actual
+    points scored so far (statSourceId 0, same period/split). A model
+    estimate built from ESPN numbers, not a sourced ROS figure -- label it
+    that way wherever it's shown. ESPN zeroes the season projection for
+    players it doesn't expect back (e.g. season-ending IR), so injury
+    prognosis is reflected here as far as ESPN reflects it.
+
+    None when ESPN has no season projection row at all.
+    """
+    projected = actual = None
+    for s in _collect_stat_rows(entry):
+        if s.get("seasonId") not in (None, season):
+            continue
+        if s.get("scoringPeriodId") != 0 or s.get("statSplitTypeId", 0) != 0:
+            continue
+        if s.get("statSourceId") == 1:
+            projected = float(s.get("appliedTotal") or 0.0)
+        elif s.get("statSourceId") == 0:
+            actual = float(s.get("appliedTotal") or 0.0)
+
+    if projected is None:
+        return None
+    return max(0.0, projected - (actual or 0.0))
+
+
+def extract_season_actual(
+    entry: dict[str, Any], *, season: int, dst: bool = False
+) -> float | None:
+    """Actual fantasy points scored so far this season (statSourceId 0,
+    scoringPeriodId 0). D/ST totals are reconstructed from raw stats,
+    since ESPN's appliedTotal is always 0 for a team defense."""
+    for s in _collect_stat_rows(entry):
+        if (
+            s.get("seasonId") in (None, season)
+            and s.get("scoringPeriodId") == 0
+            and s.get("statSourceId") == 0
+            and s.get("statSplitTypeId", 0) == 0
+        ):
+            if dst:
+                from fantasy_gm.valuation.dst_scoring import estimate_dst_points
+
+                return estimate_dst_points(s.get("stats") or {})
+            return float(s.get("appliedTotal") or 0.0)
+    return None

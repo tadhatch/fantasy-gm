@@ -180,6 +180,39 @@ class ESPNClient:
         )
         return data.get("players", []) if isinstance(data, dict) else data
 
+    def get_free_agents(
+        self,
+        *,
+        scoring_period_id: int,
+        slot_ids: list[int] | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """
+        Unrostered players (free agents and players on waivers), most
+        owned first, with that scoring period's projections. Confirmed
+        live: each entry carries status "FREEAGENT"/"WAIVERS" and, for
+        waivers, waiverProcessDate (epoch ms) -- when a claim would clear.
+        """
+        players_filter: dict[str, Any] = {
+            "filterStatus": {"value": ["FREEAGENT", "WAIVERS"]},
+            "limit": limit,
+            "sortPercOwned": {"sortPriority": 1, "sortAsc": False},
+        }
+        if slot_ids:
+            players_filter["filterSlotIds"] = {"value": slot_ids}
+        headers = {
+            "X-Fantasy-Filter": json.dumps({"players": players_filter})
+        }
+        data = self._get(
+            self.league_url,
+            params=[
+                ("view", "kona_player_info"),
+                ("scoringPeriodId", scoring_period_id),
+            ],
+            headers=headers,
+        )
+        return data.get("players", []) if isinstance(data, dict) else data
+
     def get_draft_security(
         self,
         *,

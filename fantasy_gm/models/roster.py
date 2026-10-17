@@ -19,6 +19,10 @@ class RosterEntry(BaseModel):
     # roster at all. False means he can't score this week regardless of
     # injury designation.
     nfl_active: bool | None = None
+    # ESPN playerPoolEntry.rosterLocked: can't be dropped right now.
+    roster_locked: bool | None = None
+    # ESPN player.droppable: False for the league's undroppable list.
+    droppable: bool | None = None
 
 
 class TeamRoster(BaseModel):

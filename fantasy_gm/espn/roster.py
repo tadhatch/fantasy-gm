@@ -50,6 +50,8 @@ def load_all_rosters(client: ESPNClient) -> dict[int, TeamRoster]:
                     acquisition_type=entry.get("acquisitionType"),
                     lineup_locked=pool_entry.get("lineupLocked"),
                     nfl_active=player.get("active"),
+                    roster_locked=pool_entry.get("rosterLocked"),
+                    droppable=player.get("droppable"),
                 )
             )
 

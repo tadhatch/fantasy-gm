@@ -19,6 +19,18 @@ from .optimizer import BENCH_SLOT_ID, IR_SLOT_ID
 
 NON_STARTING_SLOTS = {BENCH_SLOT_ID, IR_SLOT_ID}
 
+# ESPN's default IR-slot rule; leagues can differ, so it's configurable.
+DEFAULT_IR_ELIGIBLE_STATUSES = "INJURY_RESERVE,OUT"
+
+
+def ir_eligible_statuses_from_env() -> set[str]:
+    from fantasy_gm.config import env_str
+
+    raw = env_str(
+        "FANTASY_GM_IR_ELIGIBLE_STATUSES", DEFAULT_IR_ELIGIBLE_STATUSES
+    )
+    return {s.strip().upper() for s in raw.split(",") if s.strip()}
+
 
 @dataclass(slots=True)
 class LineupValidation:
@@ -44,6 +56,8 @@ def validate_assignments(
     assignments: dict[int, int],
     candidates: dict[int, LineupCandidate],
     slot_counts: dict[int, int],
+    *,
+    ir_eligible_statuses: set[str] | None = None,
 ) -> LineupValidation:
     """
     `assignments` maps player id -> proposed slot id; any rostered
@@ -60,6 +74,9 @@ def validate_assignments(
             )
 
     starters_per_slot: Counter[int] = Counter()
+    ir_moves_in = ir_moves_out = 0
+    if ir_eligible_statuses is None:
+        ir_eligible_statuses = ir_eligible_statuses_from_env()
 
     for pid, candidate in candidates.items():
         name = candidate.entry.name
@@ -75,10 +92,15 @@ def validate_assignments(
 
         if target in NON_STARTING_SLOTS:
             if target == IR_SLOT_ID and current != IR_SLOT_ID:
-                result.errors.append(
-                    f"{name}: moving a player into IR isn't a lineup "
-                    "change this gate allows"
-                )
+                ir_moves_in += 1
+                status = (candidate.entry.injury_status or "").upper()
+                if status not in ir_eligible_statuses:
+                    result.errors.append(
+                        f"{name} ({status or 'no status'}) isn't eligible "
+                        "for the IR slot"
+                    )
+            elif target == BENCH_SLOT_ID and current == IR_SLOT_ID:
+                ir_moves_out += 1
             continue
 
         starters_per_slot[target] += 1
@@ -114,6 +136,17 @@ def validate_assignments(
                 f"{count} players assigned to {_slot(slot_id)}, league "
                 f"allows {allowed}"
             )
+
+    ir_occupied = sum(
+        1 for c in candidates.values() if c.entry.lineup_slot_id == IR_SLOT_ID
+    )
+    if ir_moves_in and (
+        ir_occupied - ir_moves_out + ir_moves_in
+        > slot_counts.get(IR_SLOT_ID, 0)
+    ):
+        result.errors.append(
+            "not enough open IR slots for the requested IR move(s)"
+        )
 
     for slot_id, required in slot_counts.items():
         if slot_id in NON_STARTING_SLOTS:

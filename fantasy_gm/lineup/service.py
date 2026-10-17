@@ -502,8 +502,9 @@ def find_lineup_problems(
     """
     Cheap, deterministic "does the current lineup need attention right
     now?" check for the supervisor: an unlocked starter who can't start,
-    or a short starting slot with a startable, unlocked bench player
-    who could fill it. Returns a stable list of problem keys (empty if
+    a short starting slot with a startable, unlocked bench player who
+    could fill it, or a short slot nobody rostered can fill (roster
+    repair). Returns a stable list of problem keys (empty if
     fine).
     """
     problems: list[str] = []
@@ -531,6 +532,10 @@ def find_lineup_problems(
         )
         if has_fill:
             problems.append(f"empty_slot:{slot_id}")
+        else:
+            # Nobody on the roster can fill it -- the lineup worker's
+            # roster repair step needs to run.
+            problems.append(f"uncovered_slot:{slot_id}")
 
     return sorted(problems)
 

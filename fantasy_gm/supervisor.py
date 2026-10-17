@@ -427,10 +427,11 @@ def _dispatch_lineup_worker(service_manager: RailwayServiceManager) -> None:
             f"Starting lifecycle monitor for {worker.name}"
         )
 
-        # No LLM calls here, just a handful of ESPN reads and one
-        # transaction call — should be quick, but still generous since
-        # deployment_stopped remains the real completion signal.
-        expected_runtime_seconds = 120
+        # No LLM calls here, just ESPN reads and a few transaction calls
+        # (lineup, plus emergency roster repair when a slot can't be
+        # covered) — quick, but generous since deployment_stopped
+        # remains the real completion signal.
+        expected_runtime_seconds = 240
 
         cleanup_thread = threading.Thread(
             target=service_manager.wait_and_delete,

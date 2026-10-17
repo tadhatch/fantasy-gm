@@ -1211,5 +1211,93 @@ def worker_lineup(
         for error in submission.validation.errors:
             console.print(f"[bold red]error:[/bold red] {error}")
 
+    if plan.unfilled_slots:
+        from fantasy_gm.config import env_bool
+
+        if env_bool("FANTASY_GM_REPAIR_ENABLED", True):
+            _run_and_print_repair(
+                client, team_id=resolved_team_id, week=resolved_week,
+                confirm=None, trigger="lineup_worker",
+            )
+        else:
+            console.print(
+                "[yellow]Roster repair disabled "
+                "(FANTASY_GM_REPAIR_ENABLED)[/yellow]"
+            )
+
     if submission.outcome == "no_legal_lineup":
         raise typer.Exit(code=1)
+
+
+@worker_app.command("repair")
+def worker_repair(
+    team_id: int | None = typer.Option(None, "--team-id"),
+    week: int | None = typer.Option(None, "--week"),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
+    ),
+) -> None:
+    """
+    Emergency roster repair: if a required starting slot can't be filled
+    by anyone on the roster this week, acquire the best available free
+    agent/waiver player who can actually play, dropping the least
+    valuable expendable player if needed. Deterministic -- no LLM calls.
+    The lineup worker runs this automatically when it finds an
+    uncovered slot.
+    """
+    settings = get_settings()
+    client = ESPNClient(settings)
+    _run_and_print_repair(
+        client,
+        team_id=team_id or settings.espn_team_id,
+        week=week,
+        confirm=confirm,
+        trigger="manual",
+    )
+
+
+def _run_and_print_repair(client, *, team_id, week, confirm, trigger) -> None:
+    from fantasy_gm.repair.service import run_roster_repair
+
+    outcome = run_roster_repair(
+        client, team_id=team_id, week=week, confirm=confirm, trigger=trigger
+    )
+    plan = outcome.plan
+
+    def slot_name(slot_id: int) -> str:
+        return LINEUP_SLOT_IDS.get(slot_id, str(slot_id))
+
+    if not plan.uncovered_slots:
+        console.print("[green]Every starting slot can be covered.[/green]")
+        return
+
+    console.print(
+        "[bold]Roster repair[/bold] -- uncovered: "
+        + ", ".join(
+            f"{slot_name(s)} x{n}" for s, n in plan.uncovered_slots.items()
+        )
+    )
+    for action in plan.actions:
+        drop = (
+            action.drop.name
+            if action.drop
+            else (f"IR move {action.ir_player_id}" if action.ir_player_id else "none")
+        )
+        console.print(
+            f"  {slot_name(action.slot_id)}: add {action.add.name} "
+            f"({action.add.pool_status.lower()}, "
+            f"{action.add.weekly_projection:.1f} proj) / drop {drop} -- "
+            f"{outcome.results.get(action.add.player_id)}"
+        )
+        console.print(f"    why: {action.reason}")
+    for slot_id, count in plan.awaiting.items():
+        console.print(
+            f"  {slot_name(slot_id)}: waiting on {count} pending waiver claim(s)"
+        )
+    for failure in plan.unrepairable:
+        console.print(
+            f"  [bold red]{slot_name(failure.slot_id)}: NOT REPAIRED -- "
+            f"{failure.reason}[/bold red]"
+        )
