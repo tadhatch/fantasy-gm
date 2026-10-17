@@ -21,6 +21,9 @@ dependencies = [
   "psycopg[binary]>=3.1",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
 [project.scripts]
 fantasy-gm = "fantasy_gm.cli:app"
 

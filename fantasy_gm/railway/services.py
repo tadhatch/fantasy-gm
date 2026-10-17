@@ -50,6 +50,14 @@ SHARED_VARIABLES = [
     "FANTASY_GM_CHAT_REACTIONS",
     "FANTASY_GM_CHAT_PROACTIVE",
     "FANTASY_GM_CHAT_DEBUG",
+    # Lineup availability gate (fantasy_gm/lineup). LINEUP_CONFIRM is
+    # read inside the waiver worker too, for its post-transaction lineup
+    # revalidation. Blank/undefined -> code defaults.
+    "FANTASY_GM_LINEUP_CONFIRM",
+    "FANTASY_GM_INACTIVES_LEAD_MINUTES",
+    "FANTASY_GM_AVAILABILITY_MAX_AGE_MINUTES",
+    "FANTASY_GM_LINEUP_MAX_REPAIR_ATTEMPTS",
+    "FANTASY_GM_LOG_LEVEL",
 ]
 
 # A cross-service reference to the Postgres plugin, set directly on each

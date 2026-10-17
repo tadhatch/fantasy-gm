@@ -60,9 +60,18 @@ trusting it to also respond to one.
 - **Supervisor** (`fantasy-gm run`) — the one long-running process. Polls
   on an interval, keeps the chatbot alive, sweeps up any finished
   disposable workers, and dispatches recurring workers on schedule:
-  - the lineup worker fires ahead of each wave of kickoffs, read from the
-    real NFL schedule via `nflreadpy` — not a fixed interval, since
-    kickoff windows now span most weekdays in a season.
+  - the lineup worker fires ahead of each distinct kickoff time (after
+    that game's inactives are published, before it locks), read from
+    the real NFL schedule via `nflreadpy` — not a fixed interval, since
+    kickoff windows now span most weekdays in a season. Between
+    checkpoints, an LLM-free health check re-dispatches it if a starter
+    becomes unavailable.
+  - every lineup goes through a deterministic availability gate
+    (`fantasy_gm/lineup/availability.py`, `validator.py`): OUT, IR,
+    suspended, bye-week, or unknown-status players are never submitted
+    as starters, and the lineup is re-validated against a fresh ESPN
+    read immediately before submission. The transactions client refuses
+    any lineup that didn't pass it.
   - the waiver worker fires once daily, a fixed buffer after this
     league's own waiver-processing hour — read live from ESPN's own
     settings (`acquisitionSettings.waiverProcessHour`), not hardcoded, so

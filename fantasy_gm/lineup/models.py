@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from fantasy_gm.espn.transactions import LineupMove
 from fantasy_gm.models.roster import RosterEntry
+
+from .availability import Availability
 
 
 @dataclass(slots=True)
 class LineupCandidate:
     entry: RosterEntry
     projected_points: float
-    available: bool
-    unavailable_reason: str | None = None
+    # Hard eligibility -- see availability.evaluate_availability(). A
+    # high projection never overrides this.
+    availability: Availability
     # Their NFL team's game has already kicked off — ESPN won't let this
     # player's slot change regardless of what the optimizer would
     # otherwise prefer, so they're pinned to their current slot rather
@@ -26,6 +30,19 @@ class LineupCandidate:
     # real-world evaluation contributed on top.
     raw_projection: float | None = None
     evaluation_delta: float = 0.0
+    kickoff: datetime | None = None
+
+    @property
+    def available(self) -> bool:
+        return self.availability.can_start
+
+    @property
+    def unavailable_reason(self) -> str | None:
+        if self.availability.can_start and not (
+            self.availability.requires_revalidation
+        ):
+            return None
+        return self.availability.reason
 
 
 @dataclass(slots=True)

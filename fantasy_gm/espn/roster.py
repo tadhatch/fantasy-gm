@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fantasy_gm.espn.client import ESPNClient
 from fantasy_gm.models.roster import RosterEntry, TeamRoster
 
@@ -14,6 +16,7 @@ def load_all_rosters(client: ESPNClient) -> dict[int, TeamRoster]:
     other teams are running, which the trade/waiver workers need.
     """
     data = client.get_league(["mRoster", "mTeam"])
+    fetched_at = datetime.now(timezone.utc)
 
     rosters: dict[int, TeamRoster] = {}
 
@@ -45,6 +48,8 @@ def load_all_rosters(client: ESPNClient) -> dict[int, TeamRoster]:
                     injury_status=player.get("injuryStatus")
                     or pool_entry.get("injuryStatus"),
                     acquisition_type=entry.get("acquisitionType"),
+                    lineup_locked=pool_entry.get("lineupLocked"),
+                    nfl_active=player.get("active"),
                 )
             )
 
@@ -52,6 +57,7 @@ def load_all_rosters(client: ESPNClient) -> dict[int, TeamRoster]:
             team_id=team_id,
             team_name=team_name,
             entries=entries,
+            fetched_at=fetched_at,
         )
 
     return rosters
@@ -109,3 +115,27 @@ def load_roster_slot_counts(client: ESPNClient) -> dict[int, int]:
         for slot_id, count in slot_counts.items()
         if int(count) > 0
     }
+
+
+def load_lineup_settings(client: ESPNClient) -> tuple[dict[int, int], str]:
+    """
+    (slot counts, lineup lock type) from a single mSettings read. Lock
+    type is rosterSettings.lineupLocktimeType: "INDIVIDUAL_GAME" (each
+    player locks at his own kickoff -- what this league uses, confirmed
+    live) or a weekly variant where everyone locks at the scoring
+    period's first kickoff. Defaults to INDIVIDUAL_GAME if absent; ESPN's
+    per-player lineupLocked flag applies on top either way.
+    """
+    data = client.get_league(["mSettings"])
+    roster_settings = data.get("settings", {}).get("rosterSettings", {})
+    slot_counts = {
+        int(slot_id): int(count)
+        for slot_id, count in roster_settings.get(
+            "lineupSlotCounts", {}
+        ).items()
+        if int(count) > 0
+    }
+    lock_type = str(
+        roster_settings.get("lineupLocktimeType") or "INDIVIDUAL_GAME"
+    )
+    return slot_counts, lock_type

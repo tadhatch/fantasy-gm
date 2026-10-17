@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from dotenv import load_dotenv
@@ -30,3 +31,30 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+# Env helpers for settings read outside Settings. Railway workers get
+# variables as `${{ shared.NAME }}` references (railway/services.py), so
+# one that isn't defined in the project arrives as an empty string --
+# treat blank the same as unset, never as a parse error.
+
+def env_str(name: str, default: str) -> str:
+    value = os.getenv(name, "").strip()
+    return value or default
+
+
+def env_float(name: str, default: float) -> float:
+    value = os.getenv(name, "").strip()
+    return float(value) if value else default
+
+
+def env_int(name: str, default: int) -> int:
+    value = os.getenv(name, "").strip()
+    return int(value) if value else default
+
+
+def env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name, "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}

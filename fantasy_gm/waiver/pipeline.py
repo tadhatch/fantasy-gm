@@ -463,6 +463,7 @@ def _run_waiver_pipeline_body(
                 decision.add_player_name,
                 decision.drop_player_name,
             )
+            _revalidate_lineup_after_transaction(client, team_id=team_id)
 
     return WaiverRunResult(
         roster_analysis=roster_analysis,
@@ -473,6 +474,36 @@ def _run_waiver_pipeline_body(
         calls_used=calls_used,
         executed=executed,
     )
+
+
+def _revalidate_lineup_after_transaction(
+    client: ESPNClient, *, team_id: int
+) -> None:
+    """
+    A drop can remove a starter, and an immediate free-agent add lands
+    on the bench -- either way the lineup may now be short or contain a
+    player who shouldn't start. Re-run the same availability gate every
+    lineup goes through. Waiver claims that haven't processed yet don't
+    change the roster; the supervisor's lineup health check catches
+    those once they do. Uses the lineup worker's own confirm gate, not
+    the waiver one.
+    """
+    from fantasy_gm.config import env_bool
+    from fantasy_gm.lineup.service import submit_lineup_safely
+
+    confirm = env_bool("FANTASY_GM_LINEUP_CONFIRM", False)
+    try:
+        submit_lineup_safely(
+            client,
+            team_id=team_id,
+            confirm=confirm,
+            trigger="post_waiver_transaction",
+        )
+    except Exception:
+        logger.exception(
+            "waiver: lineup revalidation after transaction failed -- "
+            "the supervisor's lineup health check will retry"
+        )
 
 
 def _league_uses_faab(client: ESPNClient) -> bool:

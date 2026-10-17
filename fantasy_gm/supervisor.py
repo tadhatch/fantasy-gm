@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import time
 import threading
@@ -17,13 +18,18 @@ from fantasy_gm.railway.services import (
 
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 EVALUATION_WORKER_PREFIX = "worker-evaluate-"
 LINEUP_WORKER_PREFIX = "worker-lineup-"
 WAIVER_WORKER_PREFIX = "worker-waiver-"
 INCOMING_TRADE_WORKER_PREFIX = "worker-trade-respond-"
 
-# How long before a wave of kickoffs the lineup should already be set.
+# How long before each distinct kickoff time the lineup worker runs.
+# Must land AFTER inactives are published (FANTASY_GM_INACTIVES_LEAD_
+# MINUTES, default 90) so questionable players get their final check,
+# and BEFORE that game locks. Override with
+# FANTASY_GM_LINEUP_CHECKPOINT_BUFFER_MINUTES.
 LINEUP_CHECKPOINT_BUFFER_MINUTES = 75
 
 # How long after this league's own waiverProcessHour (read live from ESPN,
@@ -330,11 +336,30 @@ def _lineup_enabled() -> bool:
     )
 
 
+def _lineup_checkpoint_buffer_minutes() -> float:
+    from fantasy_gm.config import env_float
+
+    buffer = env_float(
+        "FANTASY_GM_LINEUP_CHECKPOINT_BUFFER_MINUTES",
+        LINEUP_CHECKPOINT_BUFFER_MINUTES,
+    )
+    inactives_lead = env_float("FANTASY_GM_INACTIVES_LEAD_MINUTES", 90)
+    if buffer >= inactives_lead:
+        logger.warning(
+            "event=config.warning setting=FANTASY_GM_LINEUP_CHECKPOINT_"
+            "BUFFER_MINUTES value=%s detail=\"runs before inactives "
+            "(%s min) -- questionable starters can't be confirmed\"",
+            buffer,
+            inactives_lead,
+        )
+    return buffer
+
+
 def _most_recent_lineup_checkpoint(
     now: datetime, *, season: int
 ) -> datetime | None:
     now_local = now.astimezone(NFL_TZ)
-    buffer = timedelta(minutes=LINEUP_CHECKPOINT_BUFFER_MINUTES)
+    buffer = timedelta(minutes=_lineup_checkpoint_buffer_minutes())
 
     try:
         games = load_season_games(season)
@@ -423,6 +448,90 @@ def _dispatch_lineup_worker(service_manager: RailwayServiceManager) -> None:
             f"[bold red][WORKER][/bold red] "
             f"Failed to launch lineup worker: {exc!r}"
         )
+
+
+_last_lineup_health_check: float | None = None
+
+
+def _lineup_health_check(
+    service_manager: RailwayServiceManager, client: ESPNClient
+) -> None:
+    """
+    Deterministic, LLM-free check between scheduled checkpoints: is any
+    unlocked starter now unable to start (new injury designation, a
+    processed waiver/trade moved something, ...), or is a starting slot
+    empty while a startable bench player could fill it? If so, dispatch
+    the lineup worker, which runs the full availability gate.
+
+    Each distinct problem set is dispatched once per scoring period
+    (keyed in task_runs), so a problem the lineup worker can't fix -- no
+    startable replacement on the roster -- doesn't redispatch every
+    interval.
+    """
+    global _last_lineup_health_check
+
+    from fantasy_gm.config import env_float
+
+    interval = 60 * env_float("FANTASY_GM_LINEUP_HEALTH_CHECK_MINUTES", 30)
+    now_ts = time.monotonic()
+    if (
+        _last_lineup_health_check is not None
+        and now_ts - _last_lineup_health_check < interval
+    ):
+        return
+    _last_lineup_health_check = now_ts
+
+    from fantasy_gm.espn.roster import current_scoring_period
+    from fantasy_gm.lineup.service import (
+        find_lineup_problems,
+        load_lineup_candidates,
+    )
+    from fantasy_gm.obs import log_event
+    from fantasy_gm.railway.task_runs import TaskRunStore
+
+    try:
+        week = current_scoring_period(client)
+        candidates, slot_counts = load_lineup_candidates(
+            client,
+            team_id=client.settings.espn_team_id,
+            week=week,
+            with_projections=False,
+        )
+        problems = find_lineup_problems(candidates, slot_counts)
+    except Exception as exc:
+        console.print(f"[red]Lineup health check failed: {exc!r}[/red]")
+        return
+
+    if not problems:
+        return
+
+    key = f"lineup-health:{week}:{','.join(problems)}"
+    try:
+        store = TaskRunStore()
+        if store.last_run_at(key) is not None:
+            return  # already dispatched for exactly this problem set
+    except Exception as exc:
+        console.print(
+            f"[red]Lineup health check bookkeeping failed: {exc!r}[/red]"
+        )
+        return
+
+    if _worker_already_running(service_manager, LINEUP_WORKER_PREFIX):
+        return
+
+    log_event(
+        logger,
+        "worker.dispatch",
+        worker="lineup",
+        reason="lineup_health_check",
+        week=week,
+        problems=problems,
+    )
+    _dispatch_lineup_worker(service_manager)
+    try:
+        store.mark_run(key)
+    except Exception:
+        logger.exception("lineup health check: failed to record dispatch")
 
 
 def _waiver_enabled() -> bool:
@@ -780,6 +889,8 @@ def run_supervisor(client: ESPNClient) -> None:
                         "lineup check due; dispatching"
                     )
                     _dispatch_lineup_worker(service_manager)
+                else:
+                    _lineup_health_check(service_manager, client)
 
             if _waiver_enabled():
                 if _waiver_due(client) and not _worker_already_running(

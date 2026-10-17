@@ -15,6 +15,7 @@ LINEUP_SLOT_IDS = {
     16: "D/ST",
     17: "K",
     20: "BE",
+    21: "IR",
     23: "FLEX",
 }
 

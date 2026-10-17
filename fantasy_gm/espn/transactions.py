@@ -53,6 +53,10 @@ class LineupMove:
     to_slot_id: int
 
 
+class UnvalidatedLineupError(RuntimeError):
+    """A lineup submission that didn't pass the availability gate."""
+
+
 class TransactionRejected(ESPNError):
     def __init__(self, message: str, *, status_code: int, body: str):
         super().__init__(message)
@@ -135,8 +139,27 @@ class ESPNTransactionsClient:
         team_id: int,
         moves: list[LineupMove],
         scoring_period_id: int,
+        validation,
         confirm: bool = False,
     ) -> dict | None:
+        # Hard gate, enforced here rather than trusted to callers: every
+        # lineup write must carry a passing lineup.validator
+        # LineupValidation for exactly these moves (see
+        # lineup.service.submit_lineup_safely). Applies in shadow mode
+        # too, so a shadow log never shows a lineup that couldn't be
+        # submitted for real.
+        if validation is None or not getattr(validation, "ok", False):
+            raise UnvalidatedLineupError(
+                "refusing to submit a lineup that hasn't passed "
+                "availability validation: "
+                f"{getattr(validation, 'errors', 'no validation')}"
+            )
+        if tuple(moves) != tuple(getattr(validation, "moves", ())):
+            raise UnvalidatedLineupError(
+                "refusing to submit lineup moves that differ from the "
+                "validated set"
+            )
+
         body = {
             "isLeagueManager": False,
             "teamId": team_id,

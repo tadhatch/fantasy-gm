@@ -151,24 +151,14 @@ def team_kickoff_for_week(
     return None
 
 
-def is_team_locked(
-    season: int,
-    espn_pro_team_id: int | None,
-    *,
-    week: int,
-    now: datetime,
-) -> bool:
-    """
-    True once this team's game this week has kicked off. Unknown team,
-    unknown schedule, or a bye week is NOT the same as locked — those
-    return False, since callers only need this to prevent moving an
-    already-locked player, not to reason about byes (handled separately
-    by is_team_on_bye()).
-    """
-    kickoff = team_kickoff_for_week(season, espn_pro_team_id, week=week)
-    if kickoff is None:
-        return False
-    return now >= kickoff
+def week_first_kickoff(season: int, *, week: int) -> datetime | None:
+    """Earliest kickoff of the given NFL week, or None if unknown."""
+    kickoffs = [
+        game.kickoff
+        for game in load_season_games(season)
+        if game.week == week
+    ]
+    return min(kickoffs) if kickoffs else None
 
 
 def is_team_on_bye(

@@ -33,13 +33,14 @@ def optimize_lineup(
     an acceptable trade-off for something this auditable and easy to
     reason about when it's submitting real transactions.
 
-    A slot only goes "unfilled" (left untouched, whoever's there stays)
-    when literally no rostered player — available or not — is eligible
-    for it at all. If there's no *available* player but there is an
-    eligible unavailable one (bye/injured), that player still gets
-    started rather than leaving the slot's current occupant benched with
-    no replacement — ESPN doesn't allow a required slot to go empty when
-    an eligible rostered player exists, and neither should this.
+    Only players whose availability says they can start
+    (candidate.available) are ever placed in a starting slot -- an
+    unavailable player is never started as a "fallback", however high
+    his projection. If no startable player exists for a slot it's left
+    unfilled (recorded in unfilled_slots, for the caller to escalate) and
+    any unavailable player currently sitting there is benched: an empty
+    slot scores the same zero as an OUT/bye player, without submitting a
+    knowingly-invalid lineup.
 
     Locked players (candidate.locked — their game already kicked off)
     are pinned to their current slot before any of this runs and never
@@ -98,25 +99,8 @@ def optimize_lineup(
             key=lambda c: c.projected_points,
             reverse=True,
         )
-        unavailable = sorted(
-            (c for c in eligible_all if not c.available),
-            key=lambda c: c.projected_points,
-            reverse=True,
-        )
 
         chosen = available[:count]
-
-        if len(chosen) < count:
-            shortfall = count - len(chosen)
-            fallback = unavailable[:shortfall]
-            for c in fallback:
-                notes.append(
-                    f"Started {c.entry.name} at "
-                    f"{LINEUP_SLOT_IDS.get(slot_id, slot_id)} despite "
-                    f"{c.unavailable_reason or 'unavailability'} — "
-                    "no healthy alternative on the roster"
-                )
-            chosen += fallback
 
         for c in chosen:
             assignments[c.entry.player_id] = slot_id
@@ -124,11 +108,23 @@ def optimize_lineup(
 
         if len(chosen) < count:
             unfilled[slot_id] = count - len(chosen)
-            notes.append(
-                f"No eligible player at all for "
-                f"{LINEUP_SLOT_IDS.get(slot_id, slot_id)} "
-                f"({len(chosen)}/{count} filled)"
-            )
+            slot_name = LINEUP_SLOT_IDS.get(slot_id, slot_id)
+            if eligible_all:
+                blocked = ", ".join(
+                    f"{c.entry.name} ({c.availability.reason})"
+                    for c in eligible_all
+                    if not c.available
+                )
+                notes.append(
+                    f"No startable player for {slot_name} "
+                    f"({len(chosen)}/{count} filled) -- every eligible "
+                    f"rostered player is unavailable: {blocked}"
+                )
+            else:
+                notes.append(
+                    f"No eligible player at all for {slot_name} "
+                    f"({len(chosen)}/{count} filled)"
+                )
 
     bench_player_ids: list[int] = []
     for pid in remaining_ids:
@@ -138,15 +134,7 @@ def optimize_lineup(
         assignments[pid] = BENCH_SLOT_ID
         bench_player_ids.append(pid)
 
-    moves = [
-        LineupMove(
-            player_id=pid,
-            from_slot_id=working[pid].entry.lineup_slot_id,
-            to_slot_id=slot_id,
-        )
-        for pid, slot_id in assignments.items()
-        if working[pid].entry.lineup_slot_id != slot_id
-    ]
+    moves = moves_from_assignments(assignments, working)
 
     return LineupPlan(
         moves=moves,
@@ -156,3 +144,25 @@ def optimize_lineup(
         candidates=working,
         notes=notes,
     )
+
+
+def moves_from_assignments(
+    assignments: dict[int, int],
+    candidates: dict[int, LineupCandidate],
+) -> list[LineupMove]:
+    """
+    The ESPN moves needed to go from each player's *current* slot (as
+    recorded on the candidate) to his assigned one. Recomputed against
+    freshly-read candidates right before submission, so a move is never
+    built from a stale "from" slot.
+    """
+    return [
+        LineupMove(
+            player_id=pid,
+            from_slot_id=candidates[pid].entry.lineup_slot_id,
+            to_slot_id=slot_id,
+        )
+        for pid, slot_id in assignments.items()
+        if pid in candidates
+        and candidates[pid].entry.lineup_slot_id != slot_id
+    ]

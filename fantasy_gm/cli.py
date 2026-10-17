@@ -25,6 +25,7 @@ from fantasy_gm.espn.roster import (
     load_team_roster,
 )
 from fantasy_gm.espn.transactions import ESPNTransactionsClient, LineupMove
+from fantasy_gm.obs import configure_logging
 from fantasy_gm.supervisor import run_supervisor
 
 
@@ -47,6 +48,11 @@ transactions_app = typer.Typer(
     help="Manage transactions whose automatic handling needs a human",
 )
 app.add_typer(transactions_app, name="transactions")
+
+
+@app.callback()
+def _main() -> None:
+    configure_logging()
 
 
 @app.command()
@@ -353,9 +359,13 @@ def roster_set_lineup(
         help="Actually submit (also requires FANTASY_GM_TRANSACTIONS_MODE=live)",
     ),
 ) -> None:
+    from fantasy_gm.lineup.service import load_lineup_candidates
+    from fantasy_gm.lineup.validator import validate_assignments
+
     settings = get_settings()
     client = ESPNClient(settings)
     txn = ESPNTransactionsClient(client)
+    resolved_team_id = team_id or settings.espn_team_id
 
     moves = []
     for raw in move:
@@ -369,11 +379,38 @@ def roster_set_lineup(
         )
 
     period = current_scoring_period(client)
+
+    # Manual moves get the same availability gate as automated ones.
+    candidates, slot_counts = load_lineup_candidates(
+        client,
+        team_id=resolved_team_id,
+        week=period,
+        with_projections=False,
+    )
+    validation = validate_assignments(
+        {m.player_id: m.to_slot_id for m in moves}, candidates, slot_counts
+    )
+    for m in moves:
+        current = candidates.get(m.player_id)
+        if current and current.entry.lineup_slot_id != m.from_slot_id:
+            validation.errors.append(
+                f"{current.entry.name} is in slot "
+                f"{current.entry.lineup_slot_id}, not {m.from_slot_id}"
+            )
+    for warning in validation.warnings:
+        console.print(f"[yellow]warning:[/yellow] {warning}")
+    if not validation.ok:
+        for error in validation.errors:
+            console.print(f"[bold red]rejected:[/bold red] {error}")
+        raise typer.Exit(code=1)
+
+    validation.moves = tuple(moves)
     txn.set_lineup(
-        team_id=team_id or settings.espn_team_id,
+        team_id=resolved_team_id,
         moves=moves,
         scoring_period_id=period,
         confirm=confirm,
+        validation=validation,
     )
 
 
@@ -1062,24 +1099,37 @@ def worker_lineup(
 ) -> None:
     """
     Set the optimal starting lineup for the week: ESPN's own weekly
-    projections, discounted for injury status (OUT/IR/suspended players
-    never start over an available alternative), plus whatever real-world
-    evaluation is cached for each roster player. No web-search/LLM calls
-    of its own — it reads what the evaluation worker already produced.
+    projections plus whatever real-world evaluation is cached, ranked
+    only among players who pass the availability gate (OUT/IR/suspended/
+    bye/unknown players never start). Re-validated against a fresh ESPN
+    read right before submitting. No web-search/LLM calls of its own.
     """
-    from fantasy_gm.lineup.service import build_lineup_plan, submit_lineup_plan
+    from fantasy_gm.lineup.service import submit_lineup_safely
 
     settings = get_settings()
     client = ESPNClient(settings)
     resolved_team_id = team_id or settings.espn_team_id
 
-    plan, resolved_week = build_lineup_plan(
+    # Every automated lineup goes through the availability gate: fresh
+    # ESPN data, deterministic validation, a second fresh read right
+    # before submitting, and nothing submitted if it can't be made valid.
+    submission = submit_lineup_safely(
         client,
         team_id=resolved_team_id,
         week=week,
+        confirm=confirm,
+        trigger="worker",
     )
+    plan = submission.plan
+    resolved_week = submission.week
 
-    console.print(f"[bold]Week {resolved_week} lineup plan[/bold]")
+    console.print(
+        f"[bold]Week {resolved_week} lineup[/bold] -- "
+        f"outcome: {submission.outcome} "
+        f"(attempts: {submission.attempts})"
+    )
+    if plan is None:
+        raise typer.Exit(code=1)
 
     def slot_name(slot_id: int) -> str:
         return LINEUP_SLOT_IDS.get(slot_id, str(slot_id))
@@ -1092,28 +1142,23 @@ def worker_lineup(
         candidate = plan.candidates.get(player_id)
         if candidate is None:
             return "?"
-        # Back-computed from projected_points rather than showing
-        # raw_projection directly: when a player is unavailable
-        # (bye/no data), the base actually used is 0.0, not their raw
-        # ESPN number — showing the unused raw figure here would look
-        # like it contributed when it didn't.
         base_used = candidate.projected_points - candidate.evaluation_delta
         delta = candidate.evaluation_delta
         delta_str = f"{delta:+.1f}" if delta else "+0.0"
         return f"{base_used:.1f} espn {delta_str} eval"
 
-    if not plan.moves:
-        console.print(
-            "[green]Lineup is already optimal — no moves needed.[/green]"
-        )
+    moves = list(submission.validation.moves) if submission.validation else []
+    if not moves:
+        console.print("[green]No moves submitted.[/green]")
     else:
-        table = Table(title="Proposed moves — why each one happened")
+        table = Table(title="Moves -- why each one happened")
         table.add_column("Player")
         table.add_column("From")
         table.add_column("To")
         table.add_column("Total")
         table.add_column("Score (espn + eval)")
-        for move in plan.moves:
+        table.add_column("Availability")
+        for move in moves:
             candidate = plan.candidates.get(move.player_id)
             name = candidate.entry.name if candidate else str(move.player_id)
             table.add_row(
@@ -1122,6 +1167,7 @@ def worker_lineup(
                 slot_name(move.to_slot_id),
                 total_str(move.player_id),
                 score_breakdown(move.player_id),
+                candidate.availability.reason if candidate else "?",
             )
         console.print(table)
 
@@ -1142,9 +1188,11 @@ def worker_lineup(
         status_bits = []
         if candidate.locked:
             status_bits.append("locked")
-        if candidate.unavailable_reason:
-            status_bits.append(candidate.unavailable_reason)
-        status = ", ".join(status_bits) if status_bits else "ok"
+        status_bits.append(
+            f"{candidate.availability.status.value}: "
+            f"{candidate.availability.reason}"
+        )
+        status = ", ".join(status_bits)
 
         board.add_row(
             candidate.entry.name,
@@ -1157,11 +1205,11 @@ def worker_lineup(
 
     for note in plan.notes:
         console.print(f"[yellow]note:[/yellow] {note}")
+    if submission.validation:
+        for warning in submission.validation.warnings:
+            console.print(f"[yellow]warning:[/yellow] {warning}")
+        for error in submission.validation.errors:
+            console.print(f"[bold red]error:[/bold red] {error}")
 
-    submit_lineup_plan(
-        client,
-        team_id=resolved_team_id,
-        plan=plan,
-        week=resolved_week,
-        confirm=confirm,
-    )
+    if submission.outcome == "no_legal_lineup":
+        raise typer.Exit(code=1)
